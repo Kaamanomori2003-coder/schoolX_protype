@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import ConfirmModal from "../components/ConfirmModal";
 
 const CATEGORIES = ["Salaires","Fournitures scolaires","Maintenance","Électricité","Eau","Internet","Événements scolaires","Transport"];
 const STATUTS = ["En attente","Approuvée","Rejetée","Payée"];
@@ -66,21 +68,21 @@ const fmt = n => n.toLocaleString("fr-FR");
 /* ───────────────── helpers ───────────────── */
 function Badge({ label, style }) {
   return (
-    <span style={{ display:"inline-block", fontSize:11, padding:"3px 10px", borderRadius:20, fontWeight:500, ...style }}>
+    <span style={{ display:"inline-block", fontSize: 14, padding:"3px 10px", borderRadius:20, fontWeight:500, ...style }}>
       {label}
     </span>
   );
 }
 
-function StatCard({ iconEmoji, iconBg, iconColor, label, value, sub, subColor }) {
+function StatCard({ icon, iconBg, label, value, sub, subColor }) {
   return (
     <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:"14px 16px", minWidth:0 }}>
-      <div style={{ width:36, height:36, borderRadius:8, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, marginBottom:10 }}>
-        {iconEmoji}
+      <div style={{ width:36, height:36, borderRadius:8, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
+        {icon}
       </div>
-      <div style={{ fontSize:11, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.4px", marginBottom:4 }}>{label}</div>
-      <div style={{ fontSize:16, fontWeight:700, color:"#0f172a" }}>{value}</div>
-      {sub && <div style={{ fontSize:11, color:subColor||"#94a3b8", marginTop:3 }}>{sub}</div>}
+      <div style={{ fontSize: 14, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.4px", marginBottom:4 }}>{label}</div>
+      <div style={{ fontSize: 19, fontWeight:700, color:"#0f172a" }}>{value}</div>
+      {sub && <div style={{ fontSize: 14, color:subColor||"#94a3b8", marginTop:3 }}>{sub}</div>}
     </div>
   );
 }
@@ -151,113 +153,218 @@ function DonutChart() {
 
 /* ─── Activity dot color ─── */
 const actBg = { add:"#dcfce7", approve:"#f3e8ff", pay:"#fef9c3", edit:"#dbeafe" };
-const actIcon = { add:"＋", approve:"✓", pay:"💰", edit:"✎" };
+const actIcon = {
+  add: <i className="ti ti-plus" style={{ fontSize: 14, color: "#166534" }} />,
+  approve: <i className="ti ti-check" style={{ fontSize: 14, color: "#6b21a8" }} />,
+  pay: <i className="ti ti-cash" style={{ fontSize: 14, color: "#854d0e" }} />,
+  edit: <i className="ti ti-pencil" style={{ fontSize: 14, color: "#1e40af" }} />
+};
 
 /* ─── Modal ─── */
-const lbl = { fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 };
+const lbl = { fontSize: 15, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 };
 const inp = {
   width:"100%", padding:"9px 11px", border:"1px solid #e2e8f0",
-  borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box",
+  borderRadius:8, fontSize: 16, outline:"none", boxSizing:"border-box",
   fontFamily:"inherit", background:"#fff", color:"#0f172a",
 };
 
-function Modal({ onClose, onAdd, nextId }) {
-  const [form, setForm] = useState({
-    desc:"", cat:"Salaires", montant:"",
-    date: new Date().toISOString().split("T")[0],
-    resp:"", motif:"", fileName:"",
+function Modal({ onClose, onSave, nextId, initialData }) {
+  const [form, setForm] = useState(() => {
+    if (initialData) {
+      return { ...initialData, date: initialData.date.split("/").reverse().join("-"), motif: initialData.motif || "", fileName: initialData.fileName || "" };
+    }
+    return {
+      desc:"", cat:"Salaires", montant:"",
+      date: new Date().toISOString().split("T")[0],
+      resp:"", motif:"", fileName:"",
+    };
   });
   const set = (k,v) => setForm(f => ({ ...f, [k]:v }));
 
   const handleSubmit = () => {
     if (!form.desc || !form.montant) return;
     const [y,m,d] = form.date.split("-");
-    onAdd({ id:nextId, cat:form.cat, desc:form.desc, montant:parseInt(form.montant), date:`${d}/${m}/${y}`, statut:"En attente", resp:form.resp||"Non défini" });
+    const formattedDate = `${d}/${m}/${y}`;
+    if (initialData) {
+      onSave({ ...initialData, ...form, montant: parseInt(form.montant), date: formattedDate });
+    } else {
+      onSave({ id:nextId, cat:form.cat, desc:form.desc, montant:parseInt(form.montant), date:formattedDate, statut:"En attente", resp:form.resp||"Non défini", motif: form.motif, fileName: form.fileName });
+    }
   };
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}>
-      <div style={{ background:"#fff", borderRadius:14, padding:26, width:460, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-          <h2 style={{ fontSize:16, fontWeight:700, margin:0, color:"#0f172a" }}>Nouvelle dépense</h2>
-          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer", fontSize:20, color:"#94a3b8" }}>✕</button>
-        </div>
-
-        <div style={{ marginBottom:12 }}>
-          <label style={lbl}>Référence (auto)</label>
-          <input value={nextId} readOnly style={{...inp, background:"#f8fafc", color:"#94a3b8"}} />
-        </div>
-
-        <div style={{ marginBottom:12 }}>
-          <label style={lbl}>Description *</label>
-          <input value={form.desc} onChange={e=>set("desc",e.target.value)} placeholder="Ex: Achat de fournitures scolaires" style={inp} />
-        </div>
-
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-          <div>
-            <label style={lbl}>Catégorie *</label>
-            <select value={form.cat} onChange={e=>set("cat",e.target.value)} style={inp}>
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-            </select>
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 460, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+        {/* HEADER BANNER */}
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <i className="ti ti-receipt" style={{ fontSize: 26, color: "#fff" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{initialData ? "Modifier la dépense" : "Nouvelle dépense"}</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Caisse &amp; Comptabilité</span>
+            </div>
           </div>
-          <div>
-            <label style={lbl}>Montant (GNF) *</label>
-            <input type="number" value={form.montant} onChange={e=>set("montant",e.target.value)} placeholder="Ex: 250000" style={inp} />
+          <button className="modal-close" onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
+        </div>
+
+        {/* BODY */}
+        <div className="modal-body" style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+          <div style={{ display: "grid", gap: 14 }}>
+            <div>
+              <label style={lbl}>Référence (auto)</label>
+              <input value={initialData ? initialData.id : nextId} readOnly style={{...inp, background:"#f8fafc", color:"#94a3b8"}} />
+            </div>
+
+            <div>
+              <label style={lbl}>Description *</label>
+              <input value={form.desc} onChange={e=>set("desc",e.target.value)} placeholder="Ex: Achat de fournitures scolaires" style={inp} />
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <div>
+                <label style={lbl}>Catégorie *</label>
+                <select value={form.cat} onChange={e=>set("cat",e.target.value)} style={inp}>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>Montant (GNF) *</label>
+                <input type="number" value={form.montant} onChange={e=>set("montant",e.target.value)} placeholder="Ex: 250000" style={inp} />
+              </div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <div>
+                <label style={lbl}>Date *</label>
+                <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>Responsable</label>
+                <input value={form.resp} onChange={e=>set("resp",e.target.value)} placeholder="Ex: M. Soumah" style={inp} />
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>Motif / Justification</label>
+              <textarea value={form.motif} onChange={e=>set("motif",e.target.value)}
+                placeholder="Décrivez le motif de cette dépense..."
+                style={{...inp, height:68, resize:"vertical"}} />
+            </div>
+
+            <div>
+              <label style={lbl}>Pièce justificative</label>
+              <label style={{ display:"block", border:"1px dashed #cbd5e1", borderRadius:10, padding:14, textAlign:"center", cursor:"pointer", fontSize: 15, color:"#94a3b8", background: "#f8fafc" }}>
+                <div style={{ marginBottom:4 }}><i className="ti ti-paperclip" style={{ fontSize: 30, color: "#0066CC" }} /></div>
+                {form.fileName || "Cliquez pour ajouter une facture, reçu ou devis (PDF, image)"}
+                <input type="file" accept=".pdf,.jpg,.png,.jpeg" style={{ display:"none" }}
+                  onChange={e => set("fileName", e.target.files[0]?.name||"")} />
+              </label>
+            </div>
+
+            <div>
+              <label style={lbl}>Workflow d'approbation</label>
+              <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                {["Créée","→","Soumise","→","Validée (Directeur)","→","Payée"].map((s,i) =>
+                  s === "→"
+                    ? <span key={i} style={{ fontSize: 14, color:"#94a3b8" }}>→</span>
+                    : <span key={i} style={{
+                        fontSize: 14, padding:"3px 9px", borderRadius:20,
+                        background: i===0 ? "#dcfce7" : i===2 ? "#dbeafe" : "#f1f5f9",
+                        color:      i===0 ? "#166534" : i===2 ? "#1e40af" : "#64748b",
+                        fontWeight: 600,
+                      }}>{s}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            <button onClick={onClose} style={{ flex:1, padding:12, border:"1px solid #cbd5e1", borderRadius:10, background:"#fff", fontSize: 16, cursor:"pointer", color:"#64748b", fontFamily:"inherit", fontWeight:700 }}>Annuler</button>
+            <button onClick={handleSubmit} style={{ flex:1, padding:12, border:"none", borderRadius:10, background:"#0066CC", color:"#fff", fontSize: 16, cursor:"pointer", fontFamily:"inherit", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><i className="ti ti-device-floppy" style={{ fontSize: 20 }}></i> Enregistrer</button>
           </div>
         </div>
-
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-          <div>
-            <label style={lbl}>Date *</label>
-            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={inp} />
-          </div>
-          <div>
-            <label style={lbl}>Responsable</label>
-            <input value={form.resp} onChange={e=>set("resp",e.target.value)} placeholder="Ex: M. Soumah" style={inp} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom:12 }}>
-          <label style={lbl}>Motif / Justification</label>
-          <textarea value={form.motif} onChange={e=>set("motif",e.target.value)}
-            placeholder="Décrivez le motif de cette dépense..."
-            style={{...inp, height:68, resize:"vertical"}} />
-        </div>
-
-        <div style={{ marginBottom:16 }}>
-          <label style={lbl}>Pièce justificative</label>
-          <label style={{ display:"block", border:"1px dashed #e2e8f0", borderRadius:8, padding:14, textAlign:"center", cursor:"pointer", fontSize:12, color:"#94a3b8" }}>
-            <div style={{ fontSize:20, marginBottom:4 }}>📎</div>
-            {form.fileName || "Cliquez pour ajouter une facture, reçu ou devis (PDF, image)"}
-            <input type="file" accept=".pdf,.jpg,.png,.jpeg" style={{ display:"none" }}
-              onChange={e => set("fileName", e.target.files[0]?.name||"")} />
-          </label>
-        </div>
-
-        <div style={{ marginBottom:18 }}>
-          <label style={lbl}>Workflow d'approbation</label>
-          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-            {["Créée","→","Soumise","→","Validée (Directeur)","→","Payée"].map((s,i) =>
-              s === "→"
-                ? <span key={i} style={{ fontSize:11, color:"#94a3b8" }}>→</span>
-                : <span key={i} style={{
-                    fontSize:11, padding:"3px 9px", borderRadius:20,
-                    background: i===0 ? "#dcfce7" : i===2 ? "#dbeafe" : "#f1f5f9",
-                    color:      i===0 ? "#166534" : i===2 ? "#1e40af" : "#64748b",
-                  }}>{s}</span>
-            )}
-          </div>
-        </div>
-
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onClose} style={{ flex:1, padding:10, border:"1px solid #e2e8f0", borderRadius:8, background:"#fff", fontSize:13, cursor:"pointer", color:"#64748b", fontFamily:"inherit" }}>Annuler</button>
-          <button onClick={handleSubmit} style={{ flex:1, padding:10, border:"none", borderRadius:8, background:"#1a3ed4", color:"#fff", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:600 }}>Enregistrer</button>
-        </div>
-      </div>
+      </motion.div>
+    </div>
+  );
+}
+  function Row({ label, value, bold, color }) {
+  return (
+    <div>
+      <label style={lbl}>{label}</label>
+      <div style={{ fontSize: 16, fontWeight: bold ? 700 : 500, color: color || "#0f172a" }}>{value}</div>
     </div>
   );
 }
 
+  function ViewModal({ item, onClose, onEdit }) {
+    const statColor = STAT_COLORS[item.statut] || { bg: "#f1f5f9", color: "#475569" };
+    const catColor  = CAT_COLORS[item.cat]      || { bg: "#f1f5f9", color: "#475569" };
+    return (
+      <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 460, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+          {/* HEADER */}
+          <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <i className="ti ti-receipt" style={{ fontSize: 26, color: "#fff" }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Détails de la dépense</h2>
+                <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>{item.id}</span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
+          </div>
+
+          {/* BODY */}
+          <div style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+            <div style={{ display: "grid", gap: 14 }}>
+              <Row label="Description" value={item.desc} />
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={lbl}>Catégorie</label>
+                  <Badge label={item.cat} style={catColor} />
+                </div>
+                <div>
+                  <label style={lbl}>Statut</label>
+                  <Badge label={item.statut} style={statColor} />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Row label="Montant" value={fmt(item.montant) + " GNF"} bold color="#dc2626" />
+                <Row label="Date" value={item.date} />
+              </div>
+
+              <Row label="Responsable" value={item.resp || "Non défini"} />
+
+              {item.motif && <Row label="Motif / Justification" value={item.motif} />}
+
+              {item.fileName && (
+                <div>
+                  <label style={lbl}>Pièce justificative</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px dashed #cbd5e1", borderRadius: 10, padding: 12, background: "#f8fafc" }}>
+                    <i className="ti ti-paperclip" style={{ fontSize: 20, color: "#0066CC" }} />
+                    <span style={{ fontSize: 15, color: "#334155" }}>{item.fileName}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 16, cursor: "pointer", color: "#64748b", fontFamily: "inherit", fontWeight: 700 }}>Fermer</button>
+              <button onClick={() => onEdit(item)} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 16, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <i className="ti ti-pencil" style={{ fontSize: 18 }} /> Modifier
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 /* ═══════════════ MAIN COMPONENT ═══════════════ */
 const PER_PAGE = 5;
 
@@ -268,6 +375,10 @@ export default function Depenses() {
   const [filterStat, setFilterStat] = useState("");
   const [page,       setPage]       = useState(1);
   const [showModal,  setShowModal]  = useState(false);
+  const [editItem,   setEditItem]   = useState(null);
+  const [viewItem,   setViewItem]   = useState(null); // ⬅️ nouveau
+  const [confirmDelDep, setConfirmDelDep] = useState(null);
+ 
 
   const filtered = depenses.filter(d => {
     const s = search.toLowerCase();
@@ -281,59 +392,79 @@ export default function Depenses() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const slice      = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
   const totalMontant = depenses.reduce((a,d) => a+d.montant, 0);
-  const nextId = `DEP-2025-0${String(29 + depenses.length - INITIAL_DATA.length).padStart(2,"0")}`;
+  const maxId = Math.max(...depenses.map(d => parseInt(d.id.split("-")[2] || 0)), 28);
+  const nextId = "DEP-2025-0" + String(maxId + 1).padStart(2,"0");
 
-  const handleAdd = d => { setDepenses(p => [d,...p]); setShowModal(false); setPage(1); };
+  const handleSave = d => { 
+    if (depenses.find(x => x.id === d.id)) {
+      setDepenses(depenses.map(x => x.id === d.id ? d : x));
+    } else {
+      setDepenses([d, ...depenses]); 
+    }
+    setShowModal(false); 
+    setEditItem(null);
+    setPage(1); 
+  };
+
+  const handleDelete = id => {
+    setDepenses(depenses.filter(d => d.id !== id));
+  };
+
+  const openAddModal = () => {
+    setEditItem(null);
+    setShowModal(true);
+  };
 
   const selStyle = {
     padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9,
-    fontSize:13, fontFamily:"inherit", outline:"none", background:"#fff", cursor:"pointer", color:"#0f172a",
+    fontSize: 16, fontFamily:"inherit", outline:"none", background:"#fff", cursor:"pointer", color:"#0f172a",
   };
 
   return (
-    <div style={{ fontFamily:"'Outfit',sans-serif", color:"#0f172a", padding:"0 0 2rem" }}>
+    <div style={{ fontFamily:"'Inter',sans-serif", color:"#0f172a", padding:"0 0 2rem" }}>
 
       {/* ── Top bar ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
-          <h1 style={{ fontSize:22, fontWeight:700, margin:0 }}>Gestion des dépenses</h1>
-          <p style={{ fontSize:13, color:"#64748b", marginTop:3 }}>Suivez et gérez toutes les dépenses de l'établissement</p>
+          <h1 style={{ fontSize: 25, fontWeight:700, margin:0 }}>Gestion des dépenses</h1>
+          <p style={{ fontSize: 16, color:"#64748b", marginTop:3 }}>Suivez et gérez toutes les dépenses de l'établissement</p>
         </div>
-        <button onClick={() => setShowModal(true)} style={{ display:"flex", alignItems:"center", gap:8, background:"#1a3ed4", color:"#fff", border:"none", borderRadius:9, padding:"10px 18px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+        <button onClick={openAddModal} style={{ display:"flex", alignItems:"center", gap:8, background:"#0066CC", color:"#fff", border:"none", borderRadius:9, padding:"10px 18px", fontSize: 16, fontWeight:600, cursor:"pointer" }}>
           + Ajouter une dépense
         </button>
       </div>
 
       {/* ── Stat cards ── */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:24 }}>
-        <StatCard iconEmoji="💼" iconBg="#dbeafe" label="Dépenses totales"  value={fmt(totalMontant)+" GNF"} sub="↑ 12,5% vs mois dernier" subColor="#16a34a" />
-        <StatCard iconEmoji="📅" iconBg="#f3e8ff" label="Ce mois (Mai)"     value="8 650 000 GNF"            sub="↑ 8,2% vs mois dernier"  subColor="#16a34a" />
-        <StatCard iconEmoji="📊" iconBg="#dcfce7" label="Budget restant"    value="6 350 000 GNF"            sub="↓ 15,3% du budget"        subColor="#dc2626" />
-        <StatCard iconEmoji="🧾" iconBg="#fef9c3" label="Nb dépenses"       value={depenses.length}          sub="↑ 5 nouvelles"            subColor="#16a34a" />
+        <StatCard icon={<i className="ti ti-briefcase" style={{ color: "#0066CC", fontSize: 20 }} />} iconBg="#dbeafe" label="Dépenses totales"  value={fmt(totalMontant)+" GNF"} sub="↑ 12,5% vs mois dernier" subColor="#16a34a" />
+        <StatCard icon={<i className="ti ti-calendar" style={{ color: "#7c3aed", fontSize: 20 }} />} iconBg="#f3e8ff" label="Ce mois (Mai)"     value="8 650 000 GNF"            sub="↑ 8,2% vs mois dernier"  subColor="#16a34a" />
+        <StatCard icon={<i className="ti ti-chart-pie" style={{ color: "#16a34a", fontSize: 20 }} />} iconBg="#dcfce7" label="Budget restant"    value="6 350 000 GNF"            sub="↓ 15,3% du budget"        subColor="#dc2626" />
+        <StatCard icon={<i className="ti ti-receipt" style={{ color: "#ca8a04", fontSize: 20 }} />} iconBg="#fef9c3" label="Nb dépenses"       value={depenses.length}          sub="↑ 5 nouvelles"            subColor="#16a34a" />
       </div>
 
       {/* ── Charts row ── */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 260px", gap:14, marginBottom:24 }}>
         {/* Line chart */}
         <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:16 }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:10 }}>Revenus vs dépenses — 12 derniers mois</div>
+          <div style={{ fontSize: 16, fontWeight:600, marginBottom:10 }}>Revenus vs dépenses — 12 derniers mois</div>
           <div style={{ display:"flex", gap:16, marginBottom:10 }}>
-            {[["#3266ad","Revenus"],["#e24b4a","Dépenses"]].map(([c,l]) => (
-              <div key={l} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"#64748b" }}>
-                <span style={{ width:10, height:10, borderRadius:2, background:c, display:"inline-block" }}></span>{l}
+              <div style={{ display:"flex", alignItems:"center", gap:6, fontSize: 15, color:"#64748b" }}>
+                <span style={{ width:10, height:10, borderRadius:2, background:"#0066CC", display:"inline-block" }}></span>Revenus
               </div>
-            ))}
+              <div style={{ display:"flex", alignItems:"center", gap:6, fontSize: 15, color:"#64748b" }}>
+                <span style={{ width:10, height:10, borderRadius:2, background:"#e24b4a", display:"inline-block" }}></span>Dépenses
+              </div>
           </div>
-          <div style={{ height:200 }}><LineChart /></div>
+          <div style={{ height:200, width:"100%", position:"relative" }}><LineChart /></div>
         </div>
 
         {/* Donut */}
         <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:16 }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:10 }}>Répartition par catégorie</div>
-          <DonutChart />
+          <div style={{ fontSize: 16, fontWeight:600, marginBottom:10 }}>Répartition par catégorie</div>
+          <div style={{ height:160, width:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}><DonutChart /></div>
           <div style={{ marginTop:6 }}>
             {DONUT_DATA.map(d => (
-              <div key={d.label} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5, fontSize:12 }}>
+              <div key={d.label} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5, fontSize: 15 }}>
                 <span style={{ width:10, height:10, borderRadius:2, background:d.color, flexShrink:0 }}></span>
                 <span style={{ flex:1, color:"#334155" }}>{d.label}</span>
                 <span style={{ fontWeight:600, color:"#64748b" }}>{d.pct}%</span>
@@ -344,16 +475,16 @@ export default function Depenses() {
       </div>
 
       {/* ── Alerts + Activity ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:14, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(350px, 1fr))", gap:14, marginBottom:24, alignItems:"start" }}>
         {/* Alerts */}
         <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:16 }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>🔔 Alertes budgétaires</div>
+          <div style={{ fontSize: 16, fontWeight:600, marginBottom:12, display: "flex", alignItems: "center", gap: 6 }}><i className="ti ti-bell-ringing" style={{ color: "#dc2626", fontSize: 18 }}></i> Alertes budgétaires</div>
           {ALERTS.map((a,i) => (
             <div key={i} style={{ display:"flex", gap:10, padding:"10px 0", borderBottom:i<ALERTS.length-1?"1px solid #f1f5f9":"none" }}>
               <div style={{ width:8, height:8, borderRadius:"50%", background:a.level==="red"?"#dc2626":"#f59e0b", marginTop:5, flexShrink:0 }}></div>
               <div>
-                <div style={{ fontSize:13, fontWeight:600 }}>{a.title}</div>
-                <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{a.msg} — {a.date}</div>
+                <div style={{ fontSize: 16, fontWeight:600 }}>{a.title}</div>
+                <div style={{ fontSize: 15, color:"#64748b", marginTop:2 }}>{a.msg} — {a.date}</div>
               </div>
             </div>
           ))}
@@ -361,16 +492,16 @@ export default function Depenses() {
 
         {/* Activity */}
         <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:16 }}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>⚡ Activités récentes</div>
+          <div style={{ fontSize: 16, fontWeight:600, marginBottom:12, display: "flex", alignItems: "center", gap: 6 }}><i className="ti ti-bolt" style={{ color: "#f59e0b", fontSize: 18 }}></i> Activités récentes</div>
           {ACTIVITIES.map((a,i) => (
             <div key={i} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom:i<ACTIVITIES.length-1?"1px solid #f1f5f9":"none" }}>
-              <div style={{ width:28, height:28, borderRadius:"50%", background:actBg[a.type], display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>
+              <div style={{ width:28, height:28, borderRadius:"50%", background:actBg[a.type], display:"flex", alignItems:"center", justifyContent:"center", fontSize: 16, flexShrink:0 }}>
                 {actIcon[a.type]}
               </div>
               <div>
-                <div style={{ fontSize:12, fontWeight:600 }}>{a.label}</div>
-                <div style={{ fontSize:11, color:"#64748b" }}>{a.desc}</div>
-                <div style={{ fontSize:11, color:"#94a3b8", marginTop:1 }}>{a.time} · {a.user}</div>
+                <div style={{ fontSize: 15, fontWeight:600 }}>{a.label}</div>
+                <div style={{ fontSize: 14, color:"#64748b" }}>{a.desc}</div>
+                <div style={{ fontSize: 14, color:"#94a3b8", marginTop:1 }}>{a.time} · {a.user}</div>
               </div>
             </div>
           ))}
@@ -380,7 +511,7 @@ export default function Depenses() {
       {/* ── Filters ── */}
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
         <div style={{ position:"relative", flex:1, minWidth:160 }}>
-          <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#94a3b8", fontSize:14 }}>🔍</span>
+          <i className="ti ti-search" style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#94a3b8", fontSize: 17 }}></i>
           <input
             type="text" placeholder="Rechercher une dépense..." value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -395,74 +526,87 @@ export default function Depenses() {
           <option value="">Tous statuts</option>
           {STATUTS.map(s => <option key={s}>{s}</option>)}
         </select>
-        <button style={{ display:"flex", alignItems:"center", gap:6, padding:"9px 14px", border:"1px solid #e2e8f0", borderRadius:9, background:"#fff", fontSize:13, cursor:"pointer", color:"#334155" }}>
+        <button style={{ display:"flex", alignItems:"center", gap:6, padding:"9px 14px", border:"1px solid #e2e8f0", borderRadius:9, background:"#fff", fontSize: 16, cursor:"pointer", color:"#334155" }}>
           📥 Exporter
         </button>
       </div>
 
       {/* ── Table ── */}
       <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, overflow:"hidden" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
-          <colgroup>
-            <col style={{width:110}}/><col style={{width:135}}/><col/><col style={{width:145}}/><col style={{width:97}}/><col style={{width:107}}/><col style={{width:97}}/><col style={{width:78}}/>
-          </colgroup>
-          <thead>
-            <tr style={{ background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
-              {["Référence","Catégorie","Description","Montant","Date","Statut","Responsable","Actions"].map(h => (
-                <th key={h} style={{ padding:"11px 12px", textAlign:"left", fontSize:11, fontWeight:600, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.4px" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
+        <div style={{ maxHeight: 380, overflowY: "auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+            <colgroup>
+              <col style={{width:177}}/><col style={{width:135}}/><col/><col style={{width:145}}/><col style={{width:97}}/><col style={{width:107}}/><col style={{width:97}}/><col style={{width:120}}/>
+            </colgroup>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+              <tr style={{ background:"#f8fafc", borderBottom:"1px solid #e2e8f0" }}>
+                {["Catégorie","Description","Montant","Date","Statut","Responsable","Actions"].map(h => (
+                  <th key={h} style={{ padding:"11px 12px", textAlign:"left", fontSize: 14, fontWeight:600, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.4px" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
             {slice.map((d,i) => (
               <tr key={d.id} style={{ borderBottom:"1px solid #f1f5f9", background:i%2===0?"#fff":"#fafafa" }}>
-                <td style={{ padding:"11px 12px", fontSize:12, color:"#64748b" }}>{d.id}</td>
+                <td style={{ padding:"11px 12px", fontSize: 15, color:"#64748b" }}>{d.id}</td>
                 <td style={{ padding:"11px 12px" }}>
                   <Badge label={d.cat} style={CAT_COLORS[d.cat]||{bg:"#f1f5f9",color:"#475569"}} />
                 </td>
-                <td style={{ padding:"11px 12px", fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{d.desc}</td>
-                <td style={{ padding:"11px 12px", fontSize:13, fontWeight:600, color:"#dc2626" }}>{fmt(d.montant)} GNF</td>
-                <td style={{ padding:"11px 12px", fontSize:13, color:"#334155" }}>{d.date}</td>
+                <td style={{ padding:"11px 12px", fontSize: 16, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{d.desc}</td>
+                <td style={{ padding:"11px 12px", fontSize: 16, fontWeight:600, color:"#dc2626" }}>{fmt(d.montant)} GNF</td>
+                <td style={{ padding:"11px 12px", fontSize: 16, color:"#334155" }}>{d.date}</td>
                 <td style={{ padding:"11px 12px" }}>
                   <Badge label={d.statut} style={STAT_COLORS[d.statut]||{bg:"#f1f5f9",color:"#475569"}} />
                 </td>
-                <td style={{ padding:"11px 12px", fontSize:12, color:"#64748b" }}>{d.resp}</td>
+                <td style={{ padding:"11px 12px", fontSize: 15, color:"#64748b" }}>{d.resp}</td>
                 <td style={{ padding:"11px 12px" }}>
-                  <div style={{ display:"flex", gap:4 }}>
-                    {["👁","✎","🗑"].map((ic,j) => (
-                      <button key={j} title={["Voir","Modifier","Supprimer"][j]}
-                        style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, padding:"3px 5px", borderRadius:6 }}>
-                        {ic}
-                      </button>
-                    ))}
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={() => setViewItem(d)} style={{ background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+                      <i className="ti ti-eye" /> Voir
+                    </button>
+                    <button onClick={() => { setEditItem(d); setShowModal(true); }} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                      <i className="ti ti-pencil" />
+                    </button>
+                    <button onClick={() => setConfirmDelDep(d)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                      <i className="ti ti-trash" />
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
             {slice.length === 0 && (
-              <tr><td colSpan={8} style={{ padding:32, textAlign:"center", color:"#94a3b8", fontSize:13 }}>Aucune dépense trouvée</td></tr>
+              <tr><td colSpan={8} style={{ padding:32, textAlign:"center", color:"#94a3b8", fontSize: 16 }}>Aucune dépense trouvée</td></tr>
             )}
-          </tbody>
-        </table>
-
-        {/* Pagination */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderTop:"1px solid #f1f5f9" }}>
-          <span style={{ fontSize:12, color:"#64748b" }}>
-            Affichage {Math.min((page-1)*PER_PAGE+1, filtered.length)}–{Math.min(page*PER_PAGE, filtered.length)} sur {filtered.length} dépenses
-          </span>
-          <div style={{ display:"flex", gap:4 }}>
-            {Array.from({ length:totalPages }, (_,i) => i+1).map(p => (
-              <button key={p} onClick={() => setPage(p)} style={{
-                padding:"5px 10px", border:"1px solid #e2e8f0", borderRadius:6,
-                background:p===page?"#1a3ed4":"#fff", color:p===page?"#fff":"#334155",
-                fontSize:12, cursor:"pointer", fontFamily:"inherit",
-              }}>{p}</button>
-            ))}
-          </div>
+            </tbody>
+          </table>
         </div>
+
+        {/* Pagination reste en dehors, donc fixe */}
+        
       </div>
 
-      {showModal && <Modal onClose={() => setShowModal(false)} onAdd={handleAdd} nextId={nextId} />}
+      <AnimatePresence mode="wait">
+        {viewItem && (
+          <ViewModal
+            key="view-modal"
+            item={viewItem}
+            onClose={() => setViewItem(null)}
+            onEdit={(item) => { setViewItem(null); setEditItem(item); setShowModal(true); }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {showModal && <Modal key="expense-modal" onClose={() => { setShowModal(false); setEditItem(null); }} onSave={handleSave} nextId={nextId} initialData={editItem} />}
+      </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={!!confirmDelDep}
+        title="Supprimer la dépense"
+        message={confirmDelDep ? `Voulez-vous vraiment supprimer la dépense "${confirmDelDep.desc}" ? Cette action est irréversible.` : ""}
+        onConfirm={() => { handleDelete(confirmDelDep.id); setConfirmDelDep(null); }}
+        onCancel={() => setConfirmDelDep(null)}
+      />
     </div>
   );
 }

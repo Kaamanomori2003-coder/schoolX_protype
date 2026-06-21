@@ -60,20 +60,20 @@ export default function Eleves() {
   };
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", color: "#0f172a" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", color: "#0f172a" }}>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Gestion des élèves</h1>
-          <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{eleves.length} élèves enregistrés</p>
+          <h1 style={{ fontSize: 25, fontWeight: 700, margin: 0 }}>Gestion des élèves</h1>
+          <p style={{ fontSize: 16, color: "#64748b", marginTop: 4 }}>{eleves.length} élèves enregistrés</p>
         </div>
         <button onClick={() => setShowModal(true)} style={{
           display: "flex", alignItems: "center", gap: 8,
-          background: "#1a3ed4", color: "#fff", border: "none",
-          borderRadius: 9, padding: "10px 18px", fontSize: 13,
+          background: "#0047BA", color: "#fff", border: "none",
+          borderRadius: 9, padding: "10px 18px", fontSize: 16,
           fontWeight: 600, cursor: "pointer"
         }}>
-          <i className="ti ti-plus" style={{ fontSize: 16 }} />
+          <i className="ti ti-plus" style={{ fontSize: 19 }} />
           Ajouter un élève
         </button>
       </div>
@@ -82,7 +82,7 @@ export default function Eleves() {
         <div style={{ position: "relative", flex: 1 }}>
           <i className="ti ti-search" style={{
             position: "absolute", left: 12, top: "50%",
-            transform: "translateY(-50%)", color: "#94a3b8", fontSize: 16
+            transform: "translateY(-50%)", color: "#94a3b8", fontSize: 19
           }} />
           <input
             type="text"
@@ -92,14 +92,14 @@ export default function Eleves() {
             style={{
               width: "100%", padding: "10px 12px 10px 36px",
               border: "1px solid #e2e8f0", borderRadius: 9,
-              fontSize: 13, outline: "none", boxSizing: "border-box",
-              fontFamily: "'Outfit', sans-serif"
+              fontSize: 16, outline: "none", boxSizing: "border-box",
+              fontFamily: "'Inter', sans-serif"
             }}
           />
         </div>
         <select value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)} style={{
           padding: "10px 14px", border: "1px solid #e2e8f0",
-          borderRadius: 9, fontSize: 13, fontFamily: "'Outfit', sans-serif",
+          borderRadius: 9, fontSize: 16, fontFamily: "'Inter', sans-serif",
           outline: "none", background: "#fff", cursor: "pointer"
         }}>
           {classes.map(c => <option key={c}>{c}</option>)}
@@ -113,7 +113,7 @@ export default function Eleves() {
               {["Élève", "Classe", "Âge", "Téléphone", "Statut", "Paiement"].map(h => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
-                  fontSize: 12, fontWeight: 600, color: "#64748b",
+                  fontSize: 15, fontWeight: 600, color: "#64748b",
                   textTransform: "uppercase", letterSpacing: "0.5px"
                 }}>{h}</th>
               ))}
@@ -128,23 +128,23 @@ export default function Eleves() {
                       width: 34, height: 34, borderRadius: "50%",
                       background: e.color, color: e.textColor,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 11, fontWeight: 700, flexShrink: 0
+                      fontSize: 14, fontWeight: 700, flexShrink: 0
                     }}>{e.initials}</div>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>{e.nom}</span>
+                    <span style={{ fontSize: 16, fontWeight: 500 }}>{e.nom}</span>
                   </div>
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 13, color: "#334155" }}>{e.classe}</td>
-                <td style={{ padding: "12px 16px", fontSize: 13, color: "#334155" }}>{e.age} ans</td>
-                <td style={{ padding: "12px 16px", fontSize: 13, color: "#334155" }}>{e.telephone}</td>
+                <td style={{ padding: "12px 16px", fontSize: 16, color: "#334155" }}>{e.classe}</td>
+                <td style={{ padding: "12px 16px", fontSize: 16, color: "#334155" }}>{e.age} ans</td>
+                <td style={{ padding: "12px 16px", fontSize: 16, color: "#334155" }}>{e.telephone}</td>
                 <td style={{ padding: "12px 16px" }}>
                   <span style={{
-                    fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 500,
+                    fontSize: 14, padding: "3px 10px", borderRadius: 20, fontWeight: 500,
                     background: statusStyle[e.status].bg, color: statusStyle[e.status].color
                   }}>{e.status}</span>
                 </td>
                 <td style={{ padding: "12px 16px" }}>
                   <span style={{
-                    fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 500,
+                    fontSize: 14, padding: "3px 10px", borderRadius: 20, fontWeight: 500,
                     background: paiementStyle[e.paiement].bg, color: paiementStyle[e.paiement].color
                   }}>{e.paiement}</span>
                 </td>
@@ -152,7 +152,7 @@ export default function Eleves() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
+                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 17 }}>
                   Aucun élève trouvé
                 </td>
               </tr>
@@ -171,9 +171,9 @@ export default function Eleves() {
             width: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.15)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Ajouter un élève</h2>
+              <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Ajouter un élève</h2>
               <button onClick={() => setShowModal(false)} style={{
-                background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 20
+                background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 23
               }}>
                 <i className="ti ti-x" />
               </button>
@@ -185,7 +185,7 @@ export default function Eleves() {
               { label: "Téléphone",   key: "telephone", placeholder: "Ex: 621 00 11 22"   },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 5 }}>
+                <label style={{ fontSize: 15, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 5 }}>
                   {f.label}
                 </label>
                 <input
@@ -196,8 +196,8 @@ export default function Eleves() {
                   style={{
                     width: "100%", padding: "10px 12px",
                     border: "1px solid #e2e8f0", borderRadius: 8,
-                    fontSize: 13, outline: "none", boxSizing: "border-box",
-                    fontFamily: "'Outfit', sans-serif"
+                    fontSize: 16, outline: "none", boxSizing: "border-box",
+                    fontFamily: "'Inter', sans-serif"
                   }}
                 />
               </div>
@@ -205,15 +205,15 @@ export default function Eleves() {
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button onClick={() => setShowModal(false)} style={{
                 flex: 1, padding: 10, border: "1px solid #e2e8f0",
-                borderRadius: 8, background: "#fff", fontSize: 13,
+                borderRadius: 8, background: "#fff", fontSize: 16,
                 fontWeight: 600, cursor: "pointer", color: "#64748b",
-                fontFamily: "'Outfit', sans-serif"
+                fontFamily: "'Inter', sans-serif"
               }}>Annuler</button>
               <button onClick={handleAjouter} style={{
                 flex: 1, padding: 10, border: "none",
-                borderRadius: 8, background: "#1a3ed4", color: "#fff",
-                fontSize: 13, fontWeight: 600, cursor: "pointer",
-                fontFamily: "'Outfit', sans-serif"
+                borderRadius: 8, background: "#0047BA", color: "#fff",
+                fontSize: 16, fontWeight: 600, cursor: "pointer",
+                fontFamily: "'Inter', sans-serif"
               }}>Ajouter</button>
             </div>
           </div>

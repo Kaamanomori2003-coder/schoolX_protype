@@ -1,5 +1,5 @@
 const stats = [
-  { label: "Total Élèves",      value: "1 243", icon: "ti-users",       color: "#dbeafe", iconColor: "#1a3ed4", trend: "+12 ce mois" },
+  { label: "Total Élèves",      value: "1 243", icon: "ti-users",       color: "#dbeafe", iconColor: "#0047BA", trend: "+12 ce mois" },
   { label: "Total Professeurs", value: "87",    icon: "ti-school",      color: "#dcfce7", iconColor: "#16a34a", trend: "+2 ce mois"  },
   { label: "Paiements reçus",   value: "4 850 000 GNF", icon: "ti-credit-card", color: "#fef9c3", iconColor: "#ca8a04", trend: "+8% vs mois dernier" },
   { label: "Dépenses du mois",  value: "1 200 000 GNF", icon: "ti-chart-pie",   color: "#fee2e2", iconColor: "#dc2626", trend: "-3% vs mois dernier" },
@@ -24,7 +24,7 @@ const paiementsMois = [
 const alertes = [
   { texte: "12 élèves n'ont pas encore payé",    icon: "ti-alert-circle",   color: "#ef4444" },
   { texte: "3 professeurs absents aujourd'hui",   icon: "ti-user-off",       color: "#f59e0b" },
-  { texte: "Réunion parents prévue vendredi",     icon: "ti-calendar-event", color: "#1a3ed4" },
+  { texte: "Réunion parents prévue vendredi",     icon: "ti-calendar-event", color: "#0047BA" },
   { texte: "Bulletins du trimestre disponibles",  icon: "ti-file-description",color: "#16a34a" },
 ];
 
@@ -38,12 +38,12 @@ const statusStyle = {
 
 export default function Dashboard() {
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", color: "#0f172a" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", color: "#0f172a" }}>
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Tableau de bord</h1>
-        <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+        <h1 style={{ fontSize: 25, fontWeight: 700, margin: 0 }}>Tableau de bord</h1>
+        <p style={{ fontSize: 16, color: "#64748b", marginTop: 4 }}>
           Bienvenue sur SchoolX - Année scolaire 2025/2026
         </p>
       </div>
@@ -61,13 +61,13 @@ export default function Dashboard() {
               alignItems: "center", justifyContent: "center",
               marginBottom: 12
             }}>
-              <i className={`ti ${s.icon}`} style={{ fontSize: 20, color: s.iconColor }} />
+              <i className={`ti ${s.icon}`} style={{ fontSize: 23, color: s.iconColor }} />
             </div>
-            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <div style={{ fontSize: 15, color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>
               {s.label}
             </div>
-            <div style={{ fontSize: 22, fontWeight: 700, margin: "5px 0 3px" }}>{s.value}</div>
-            <div style={{ fontSize: 12, color: "#22c55e", fontWeight: 500 }}>{s.trend}</div>
+            <div style={{ fontSize: 25, fontWeight: 700, margin: "5px 0 3px" }}>{s.value}</div>
+            <div style={{ fontSize: 15, color: "#22c55e", fontWeight: 500 }}>{s.trend}</div>
           </div>
         ))}
       </div>
@@ -77,21 +77,21 @@ export default function Dashboard() {
 
         {/* Graphique paiements */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-            <i className="ti ti-chart-bar" style={{ color: "#1a3ed4", fontSize: 18 }} />
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+            <i className="ti ti-chart-bar" style={{ color: "#0047BA", fontSize: 21 }} />
             Paiements par mois
           </div>
           {paiementsMois.map((p) => (
             <div key={p.mois} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <span style={{ fontSize: 12, color: "#64748b", width: 32 }}>{p.mois}</span>
+              <span style={{ fontSize: 15, color: "#64748b", width: 32 }}>{p.mois}</span>
               <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 4, height: 10 }}>
                 <div style={{
                   width: `${(p.montant / maxMontant) * 100}%`,
-                  background: "#1a3ed4", borderRadius: 4, height: 10,
+                  background: "#0047BA", borderRadius: 4, height: 10,
                   transition: "width 0.4s ease"
                 }} />
               </div>
-              <span style={{ fontSize: 12, fontWeight: 600, width: 90, textAlign: "right" }}>
+              <span style={{ fontSize: 15, fontWeight: 600, width: 90, textAlign: "right" }}>
                 {p.montant.toLocaleString()} GNF
               </span>
             </div>
@@ -100,8 +100,8 @@ export default function Dashboard() {
 
         {/* Dernières inscriptions */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <i className="ti ti-users" style={{ color: "#1a3ed4", fontSize: 18 }} />
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <i className="ti ti-users" style={{ color: "#0047BA", fontSize: 21 }} />
             Dernières inscriptions
           </div>
           {recentStudents.map((s) => (
@@ -113,18 +113,18 @@ export default function Dashboard() {
                 width: 34, height: 34, borderRadius: "50%",
                 background: s.color, color: s.textColor,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, flexShrink: 0
+                fontSize: 14, fontWeight: 700, flexShrink: 0
               }}>
                 {s.initials}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div style={{ fontSize: 16, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {s.name}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{s.classe}</div>
+                <div style={{ fontSize: 14, color: "#64748b" }}>{s.classe}</div>
               </div>
               <span style={{
-                fontSize: 11, padding: "3px 8px", borderRadius: 20, fontWeight: 500, flexShrink: 0,
+                fontSize: 14, padding: "3px 8px", borderRadius: 20, fontWeight: 500, flexShrink: 0,
                 background: statusStyle[s.status].bg,
                 color: statusStyle[s.status].color
               }}>
@@ -137,8 +137,8 @@ export default function Dashboard() {
 
       {/* Alertes */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          <i className="ti ti-bell" style={{ color: "#1a3ed4", fontSize: 18 }} />
+        <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <i className="ti ti-bell" style={{ color: "#0047BA", fontSize: 21 }} />
           Alertes & rappels
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
@@ -148,8 +148,8 @@ export default function Dashboard() {
               background: "#f8fafc", borderRadius: 8, padding: "12px 14px",
               border: "1px solid #e2e8f0"
             }}>
-              <i className={`ti ${a.icon}`} style={{ fontSize: 20, color: a.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, color: "#334155" }}>{a.texte}</span>
+              <i className={`ti ${a.icon}`} style={{ fontSize: 23, color: a.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 16, color: "#334155" }}>{a.texte}</span>
             </div>
           ))}
         </div>

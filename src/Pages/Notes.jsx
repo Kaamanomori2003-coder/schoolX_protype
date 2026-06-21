@@ -3,6 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./Notes.css";
 import { MATIERES, MAT_ABR, MAT_CLR, COEFFS as INITIAL_COEFFS, CLASSES, ELEVES, INITIAL_NOTES, avatarColor, getInitials, noteColor, statutInfo, EVO } from "./notesData";
+import ConfirmModal from "../components/ConfirmModal";
+import { 
+  Target, 
+  CheckCircle, 
+  AlertTriangle, 
+  Eye, 
+  AlertCircle 
+} from "lucide-react";
+
 
 function useOutsideClick(ref, cb) {
   useEffect(() => {
@@ -19,51 +28,61 @@ function CircleProgress({ pct, color, label }) {
         <path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#e2e8f0" strokeWidth="3" />
         <path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pct}, 100`} />
       </svg>
-      <div className="circle-label" style={{ color, fontWeight: 700, fontSize: 10 }}>{label}</div>
+      <div className="circle-label" style={{ color, fontWeight: 700, fontSize: 13 }}>{label}</div>
     </div>
   );
 }
 
-function ContextMenu({ eleve, onClose, onView, onEdit, onDelete, onPrint }) {
+function ContextMenu({ eleve, onClose, onView, onEdit, onEditInfo, onPrint }) {
   const ref = useRef();
   useOutsideClick(ref, onClose);
   return (
     <div ref={ref} className="ctx-menu">
-      <button onClick={() => { onView(eleve); onClose(); }}>👁 Voir le bulletin</button>
-      <button onClick={() => { onPrint(eleve); onClose(); }}>🖨 Imprimer</button>
-      <button onClick={() => { onEdit(eleve); onClose(); }}>✏️ Modifier les notes</button>
+      <button onClick={() => { onView(eleve); onClose(); }}><i className="ti ti-eye"></i> Voir le bulletin</button>
+      <button onClick={() => { onPrint(eleve); onClose(); }}><i className="ti ti-printer"></i> Imprimer</button>
+      <button onClick={() => { onEdit(eleve); onClose(); }}><i className="ti ti-pencil"></i> Saisir les notes</button>
+      <button onClick={() => { onEditInfo(eleve); onClose(); }}><i className="ti ti-user-cog"></i> Modifier l'élève</button>
       <hr />
-      <button onClick={() => { onDelete(eleve); onClose(); }} className="danger">🗑 Supprimer</button>
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────
+   MODAL COEFFICIENTS
+───────────────────────────────────────────── */
 function CoeffModal({ coeffs, setCoeffs, onClose }) {
   const [localCoeffs, setLocalCoeffs] = useState({ ...coeffs });
 
-  const handleSave = () => {
-    setCoeffs(localCoeffs);
-    onClose();
-  };
+  const handleSave = () => { setCoeffs(localCoeffs); onClose(); };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" style={{ maxWidth: 450 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header" style={{ background: "#8b5cf6", padding: "20px 24px" }}>
-          <div className="modal-profile" style={{ alignItems: "center" }}>
-            <div className="left" style={{ gap: 12 }}>
-              <div className="modal-avatar" style={{ width: 48, height: 48, fontSize: 20, background: "rgba(255,255,255,0.2)" }}>⚙️</div>
-              <div><h2 style={{ fontSize: 18, margin: 0 }}>Coefficients</h2><span className="classe-badge" style={{ marginTop: 2, fontSize: 11 }}>Gestion des matières</span></div>
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 460, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <i className="ti ti-settings" style={{ fontSize: 28, color: "#fff" }} />
             </div>
-            <button className="modal-close" onClick={onClose}>✕</button>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Coefficients</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Gestion des matières</span>
+            </div>
           </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-        <div className="modal-body" style={{ padding: "24px" }}>
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>Ajustez les coefficients pour chaque matière. Cela recalculera automatiquement toutes les moyennes.</p>
+
+        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+          <p style={{ fontSize: 15, color: "#64748b", marginBottom: 20, marginTop: 0 }}>
+            Ajustez les coefficients pour chaque matière. Cela recalculera automatiquement toutes les moyennes.
+          </p>
           <div style={{ display: "grid", gap: 12 }}>
             {MATIERES.map(mat => (
-              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{mat}</div>
+              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#334155" }}>{mat}</div>
                 <input
                   type="number" min="1" max="10" step="1"
                   value={localCoeffs[mat] || 1}
@@ -73,14 +92,16 @@ function CoeffModal({ coeffs, setCoeffs, onClose }) {
                     if (val > 10) val = 10;
                     setLocalCoeffs(prev => ({ ...prev, [mat]: val }));
                   }}
-                  style={{ width: 60, padding: "6px 10px", border: "2px solid #e2e8f0", borderRadius: 6, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center" }}
+                  style={{ width: 64, padding: "6px 10px", border: "2px solid #e2e8f0", borderRadius: 8, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center", fontSize: 16 }}
                 />
               </div>
             ))}
           </div>
-          <div className="modal-actions" style={{ marginTop: 24 }}>
-            <button className="btn-close-modal" onClick={onClose}>Annuler</button>
-            <button className="btn-print" style={{ background: "#8b5cf6" }} onClick={handleSave}>💾 Appliquer</button>
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} /> Appliquer
+            </button>
           </div>
         </div>
       </motion.div>
@@ -88,6 +109,9 @@ function CoeffModal({ coeffs, setCoeffs, onClose }) {
   );
 }
 
+/* ─────────────────────────────────────────────
+   MODAL SAISIE DES NOTES
+───────────────────────────────────────────── */
 function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose }) {
   const [localNotes, setLocalNotes] = useState({ ...notesData[eleve.id][trimestre] });
 
@@ -102,41 +126,44 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
   };
 
   const handleSave = () => {
-    setNotesData(prev => ({
-      ...prev,
-      [eleve.id]: {
-        ...prev[eleve.id],
-        [trimestre]: localNotes
-      }
-    }));
+    setNotesData(prev => ({ ...prev, [eleve.id]: { ...prev[eleve.id], [trimestre]: localNotes } }));
     onClose();
   };
 
   const m = getMoy(localNotes);
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="modal-content" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header" style={{ background: "#1e293b", padding: "20px 24px" }}>
-          <div className="modal-profile" style={{ alignItems: "center" }}>
-            <div className="left" style={{ gap: 12 }}>
-              <div className="modal-avatar" style={{ width: 48, height: 48, fontSize: 16 }}>{getInitials(eleve.nom)}</div>
-              <div><h2 style={{ fontSize: 18, margin: 0 }}>{eleve.nom}</h2><span className="classe-badge" style={{ marginTop: 2, fontSize: 11 }}>Saisie des notes - {trimestre}</span></div>
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 500, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: 20, color: "#fff" }}>
+              {getInitials(eleve.nom)}
             </div>
-            <button className="modal-close" onClick={onClose}>✕</button>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{eleve.nom}</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Saisie des notes — {trimestre}</span>
+            </div>
           </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-        <div className="modal-body" style={{ padding: "24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-            <span style={{ fontWeight: 600, color: "#64748b" }}>Moyenne simulée:</span>
-            <span style={{ fontWeight: 800, color: noteColor(m), fontSize: 16 }}>{m} / 20</span>
+
+        <div style={{ padding: "24px", maxHeight: "72vh", overflowY: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, background: "#f8fafc", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <span style={{ fontWeight: 600, color: "#64748b", fontSize: 15 }}>Moyenne simulée :</span>
+            <span style={{ fontWeight: 800, color: noteColor(m), fontSize: 22 }}>{m} <span style={{ fontSize: 15, color: "#94a3b8" }}>/ 20</span></span>
           </div>
-          <div style={{ display: "grid", gap: 12 }}>
+
+          <div style={{ display: "grid", gap: 10 }}>
             {MATIERES.map(mat => (
-              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: 8 }}>
+              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 10 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{mat}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>Coeff: {coeffs[mat]}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#334155" }}>{mat}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8" }}>Coeff : {coeffs[mat]}</div>
                 </div>
                 <input
                   type="number" min="0" max="20" step="0.25"
@@ -148,14 +175,17 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
                     if (val > 20) val = 20;
                     setLocalNotes(prev => ({ ...prev, [mat]: val }));
                   }}
-                  style={{ width: 70, padding: "6px 10px", border: "2px solid #e2e8f0", borderRadius: 6, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center" }}
+                  style={{ width: 72, padding: "7px 10px", border: "2px solid #e2e8f0", borderRadius: 8, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center", fontSize: 16 }}
                 />
               </div>
             ))}
           </div>
-          <div className="modal-actions" style={{ marginTop: 24 }}>
-            <button className="btn-close-modal" onClick={onClose}>Annuler</button>
-            <button className="btn-print" onClick={handleSave}>💾 Enregistrer</button>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} /> Enregistrer
+            </button>
           </div>
         </div>
       </motion.div>
@@ -163,77 +193,103 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
   );
 }
 
-function AddStudentModal({ onClose, onAdd, classes, trimestre }) {
-  const [name, setName] = useState('');
-  const [classe, setClasse] = useState(classes[0] || '');
-  const [notes, setNotes] = useState(
-    MATIERES.reduce((acc, mat) => { acc[mat] = ''; return acc; }, {})
-  );
+/* ─────────────────────────────────────────────
+   MODAL AJOUTER / MODIFIER UN ÉLÈVE
+───────────────────────────────────────────── */
+function StudentModal({ onClose, onSave, classes, trimestre, initialStudent }) {
+  const isEdit = !!initialStudent;
+  const [name, setName] = useState(initialStudent ? initialStudent.nom : '');
+  const [classe, setClasse] = useState(initialStudent ? initialStudent.classe : (classes[0] || ''));
+  const [notes, setNotes] = useState(MATIERES.reduce((acc, mat) => { acc[mat] = ''; return acc; }, {}));
 
   const handleSubmit = () => {
     if (!name.trim() || !classe) return;
-    const id = Date.now();
-    onAdd({ id, nom: name, classe, notes });
+    if (isEdit) {
+      onSave({ ...initialStudent, nom: name, classe });
+    } else {
+      const id = Date.now();
+      onSave({ id, nom: name, classe, notes });
+    }
     onClose();
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header" style={{ background: "#8b5cf6", padding: "20px 24px" }}>
-          <div className="modal-profile" style={{ alignItems: "center" }}>
-            <div className="left" style={{ gap: 12 }}>
-              <div className="modal-avatar" style={{ width: 48, height: 48, fontSize: 20, background: "rgba(255,255,255,0.2)" }}>+</div>
-              <div>
-                <h2 style={{ fontSize: 18, margin: 0 }}>Ajouter un élève</h2>
-                <span className="classe-badge" style={{ marginTop: 2, fontSize: 11 }}>Informations &amp; Notes</span>
-              </div>
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 480, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <i className={`ti ${isEdit ? "ti-user-cog" : "ti-user-plus"}`} style={{ fontSize: 28, color: "#fff" }} />
             </div>
-            <button className="modal-close" onClick={onClose}>✕</button>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{isEdit ? "Modifier l'élève" : "Ajouter un élève"}</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>
+                {isEdit ? "Informations personnelles" : "Informations & Notes initiales"}
+              </span>
+            </div>
           </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-        <div className="modal-body" style={{ padding: "24px", maxHeight: "80vh", overflowY: "auto" }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 4, fontWeight: 600 }}>Nom complet</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }} placeholder="Ex: Jean Dupont" />
+
+        <div style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+          <div style={{ display: "grid", gap: 14 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet *</label>
+              <input
+                type="text" placeholder="Ex: Jean Dupont" value={name}
+                onChange={e => setName(e.target.value)}
+                style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Classe *</label>
+              <select
+                value={classe} onChange={e => setClasse(e.target.value)}
+                style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }}
+              >
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", marginBottom: 4, fontWeight: 600 }}>Classe</label>
-            <select value={classe} onChange={e => setClasse(e.target.value)} style={{ width: "100%", padding: "8px", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }}>
-              {classes.map(c => (<option key={c} value={c}>{c}</option>))}
-            </select>
-          </div>
-          
-          <hr style={{ border: "0", borderTop: "1px solid #f1f5f9", margin: "16px 0" }} />
-          
-          <h3 style={{ fontSize: 14, marginBottom: 12, color: "#475569", fontWeight: 700 }}>Notes initiales ({trimestre})</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 8 }}>
-            {MATIERES.map(mat => (
-              <div key={mat} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>{mat}</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  step="0.25"
-                  placeholder="Note /20"
-                  value={notes[mat]}
-                  onChange={e => {
-                    let val = parseFloat(e.target.value);
-                    if (isNaN(val)) val = "";
-                    if (val < 0) val = 0;
-                    if (val > 20) val = 20;
-                    setNotes(prev => ({ ...prev, [mat]: val }));
-                  }}
-                  style={{ padding: "8px", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none", fontSize: 13 }}
-                />
+
+          {!isEdit && (
+            <>
+              <hr style={{ border: "0", borderTop: "1px solid #f1f5f9", margin: "20px 0" }} />
+              <h3 style={{ fontSize: 16, marginBottom: 14, color: "#475569", fontWeight: 700, marginTop: 0 }}>
+                <i className="ti ti-clipboard-list" style={{ marginRight: 8, color: "#8b5cf6", fontSize: 18, verticalAlign: "middle" }} />
+                Notes initiales ({trimestre})
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {MATIERES.map(mat => (
+                  <div key={mat}>
+                    <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600, color: "#64748b" }}>{mat}</label>
+                    <input
+                      type="number" min="0" max="20" step="0.25" placeholder="Note /20" value={notes[mat]}
+                      onChange={e => {
+                        let val = parseFloat(e.target.value);
+                        if (isNaN(val)) val = "";
+                        if (val < 0) val = 0;
+                        if (val > 20) val = 20;
+                        setNotes(prev => ({ ...prev, [mat]: val }));
+                      }}
+                      style={{ width: "100%", padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 15, boxSizing: "border-box" }}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <div className="modal-actions" style={{ marginTop: 24 }}>
-            <button className="btn-close-modal" onClick={onClose}>Annuler</button>
-            <button className="btn-print" style={{ background: "#8b5cf6" }} onClick={handleSubmit}>💾 Ajouter l'élève</button>
+            </>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSubmit} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} />
+              {isEdit ? "Enregistrer" : "Ajouter l'élève"}
+            </button>
           </div>
         </div>
       </motion.div>
@@ -241,113 +297,364 @@ function AddStudentModal({ onClose, onAdd, classes, trimestre }) {
   );
 }
 
+/* ─────────────────────────────────────────────
+   MODAL BULLETIN (Vue détaillée avec Tabs)
+───────────────────────────────────────────── */
 function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdit }) {
   if (!eleve) return null;
+  const [dossierTab, setDossierTab] = useState("resume");
   const tNotes = notesData[eleve.id][trimestre];
   const m = getMoyenne(tNotes);
   const s = statutInfo(m);
   const vals = Object.values(tNotes);
   const mx = Math.max(...vals), mn = Math.min(...vals);
   const mf = MATIERES.find(k => tNotes[k] === mx);
-const mw = MATIERES.find(k => tNotes[k] === mn);
-const bg = m >= 14 ? "linear-gradient(135deg,#10b981,#059669)" : m >= 10 ? "linear-gradient(135deg,#3b82f6,#4f46e5)" : m >= 8 ? "linear-gradient(135deg,#f59e0b,#ea580c)" : "linear-gradient(135deg,#ef4444,#e11d48)";
+  const mw = MATIERES.find(k => tNotes[k] === mn);
+  const bg = m >= 14 ? "#10b981" : m >= 10 ? "#3b82f6" : m >= 8 ? "#f59e0b" : "#ef4444";
 
-const chartData = [
-  { name: 'T1', moyenne: getMoyenne(notesData[eleve.id].T1) },
-  { name: 'T2', moyenne: getMoyenne(notesData[eleve.id].T2) },
-  { name: 'T3', moyenne: getMoyenne(notesData[eleve.id].T3) }
-];
+  const handlePrint = () => {
+    const w = window.open("", "_blank");
+    w.document.write(`<html><head><title>Bulletin - ${eleve.nom}</title><style>body{font-family:sans-serif;padding:40px}h1{color:#1e293b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #e2e8f0;padding:10px;text-align:left}th{background:#f8fafc}tfoot td{font-weight:bold;background:#eff6ff}</style></head><body>`);
+    w.document.write(`<h1>Bulletin de notes - ${trimestre}</h1><p><strong>Élève :</strong> ${eleve.nom}</p><p><strong>Classe :</strong> ${eleve.classe}</p><p><strong>Statut :</strong> ${s.l}</p>`);
+    w.document.write(`<table><thead><tr><th>Matière</th><th>Coef.</th><th>Note /20</th></tr></thead><tbody>`);
+    MATIERES.forEach(mat => { w.document.write(`<tr><td>${mat}</td><td>${coeffs[mat]}</td><td>${tNotes[mat]}</td>`); });
+    w.document.write(`</tbody><tfoot><tr><td colspan="2">Moyenne générale</td><td>${m}/20</td>`);
+    w.document.write(`</tfoot></table></body></html>`);
+    w.document.close(); w.print();
+  };
 
-const handlePrint = () => {
-  const w = window.open("", "_blank");
-  w.document.write(`<html><head><title>Bulletin - ${eleve.nom}</title><style>body{font-family:sans-serif;padding:40px}h1{color:#1e293b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #e2e8f0;padding:10px;text-align:left}th{background:#f8fafc}tfoot td{font-weight:bold;background:#eff6ff}</style></head><body>`);
-  w.document.write(`<h1>Bulletin de notes - ${trimestre}</h1><p><strong>Élève :</strong> ${eleve.nom}</p><p><strong>Classe :</strong> ${eleve.classe}</p><p><strong>Statut :</strong> ${s.l}</p>`);
-  w.document.write(`<table><thead><tr><th>Matière</th><th>Coef.</th><th>Note /20</th></tr></thead><tbody>`);
-  MATIERES.forEach(mat => { w.document.write(`<tr><td>${mat}</td><td>${coeffs[mat]}</td><td>${tNotes[mat]}</td></tr>`); });
-  w.document.write(`</tbody><tfoot><tr><td colspan="2">Moyenne générale</td><td>${m}/20</td></tr></tfoot></table></body></html>`);
-  w.document.close(); w.print();
-};
-return (
-  <div className="modal-overlay" onClick={onClose}>
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()}>
-      <div className="modal-header" style={{ background: bg }}>
-        <div className="decor" />
-        <div className="modal-profile">
-          <div className="left">
-            <div className="modal-avatar">{getInitials(eleve.nom)}</div>
-            <div><h2>{eleve.nom}</h2><span className="classe-badge">{eleve.classe} - {trimestre}</span></div>
+  const thStyle = {
+    padding: "14px",
+    textAlign: "left",
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#475569",
+    borderBottom: "1px solid #e2e8f0"
+  };
+
+  const tdStyle = {
+    padding: "14px",
+    fontSize: "14px",
+    color: "#334155",
+    borderBottom: "1px solid #f1f5f9"
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 700, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        {/* HEADER avec TABS */}
+        <div style={{ background: "#0066CC", padding: "24px", color: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <div style={{
+                width: 60, height: 60, borderRadius: "50%",
+                background: "rgba(255,255,255,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, fontSize: 22, color: "#fff", flexShrink: 0
+              }}>
+                {getInitials(eleve.nom)}
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{eleve.nom}</h2>
+                <span style={{ color: "#e0f2fe", fontWeight: 600, fontSize: 14 }}>
+                  {eleve.classe} &nbsp;•&nbsp; {trimestre} &nbsp;•&nbsp; {s.l}
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 16 }}>✕</button>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+
+          {/* TABS */}
+          <div style={{ display: "flex", gap: 10, marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 12 }}>
+            {[
+              { id: "resume", label: "Résumé" },
+              { id: "notes", label: "Notes détaillées" },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDossierTab(tab.id)}
+                style={{
+                  background: dossierTab === tab.id ? "#fff" : "transparent",
+                  color: dossierTab === tab.id ? "#0066CC" : "#fff",
+                  border: "none", borderRadius: 8,
+                  padding: "8px 16px", fontWeight: 700, cursor: "pointer",
+                  fontSize: 14, transition: "all .2s"
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="modal-body">
-        <div className="modal-stats">
-          <div className="modal-stat" style={{ background: "#f8fafc" }}>
-            <div className="label" style={{ color: "#64748b" }}>Moyenne</div>
-            <div className="value" style={{ color: noteColor(m) }}>{m}</div>
-            <div style={{ fontSize: 12, color: "#94a3b8" }}>/20</div>
-          </div>
-          <div className="modal-stat" style={{ background: "#f0fdf4" }}>
-            <div className="label" style={{ color: "#10b981" }}>Point fort</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#065f46" }}>{mf}</div>
-            <div className="sub" style={{ background: "#dcfce7", color: "#10b981" }}>{mx}/20</div>
-          </div>
-          <div className="modal-stat" style={{ background: "#fef2f2" }}>
-            <div className="label" style={{ color: "#ef4444" }}>À renforcer</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#991b1b" }}>{mw}</div>
-            <div className="sub" style={{ background: "#fee2e2", color: "#ef4444" }}>{mn}/20</div>
-          </div>
-        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 }}>
-          <div>
-            <h3><span style={{ color: "#3b82f6" }}>📊</span> Détail des notes</h3>
-            <div style={{ maxHeight: 220, overflowY: "auto", paddingRight: 8 }}>
-              {MATIERES.map(mat => {
-                const n = tNotes[mat], p = (n / 20) * 100;
-                return (
-                  <div className="note-detail" key={mat} style={{ marginBottom: 8 }}>
-                    <div className="row">
-                      <span className="matiere">{mat} <span style={{ fontSize: 10, color: "#94a3b8" }}>(x{coeffs[mat]})</span></span>
-                      <span className="note-badge" style={{ background: noteColor(n) + "20", color: noteColor(n) }}>{n}/20</span>
-                    </div>
-                    <div className="progress-bar"><div className="progress-fill" style={{ width: p + "%", background: MAT_CLR[mat] }} /></div>
+        {/* BODY */}
+        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+
+          {/* ── TAB RÉSUMÉ ── */}
+          {dossierTab === "resume" && (
+            <>
+              {/* 3 cartes stats */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 20 }}>
+                <div style={{ background: "#f8fafc", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #e2e8f0" }}>
+                  <div style={{ color: "#64748b", fontWeight: 600, marginBottom: 6 }}>Moyenne Générale</div>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: noteColor(m) }}>{m}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 14 }}>/20</div>
+                </div>
+                <div style={{ background: "#f0fdf4", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #bbf7d0" }}>
+                  <div style={{ color: "#14d65b", fontWeight: 600, marginBottom: 6 }}>Point Fort</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: "#065f46" }}>{mf}</div>
+                  <div style={{ background: "#dcfce7", color: "#16a34a", borderRadius: 20, display: "inline-block", padding: "2px 10px", marginTop: 6, fontWeight: 700 }}>{mx}/20</div>
+                </div>
+                <div style={{ background: "#fef2f2", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #fecaca" }}>
+                  <div style={{ color: "#dc2626", fontWeight: 600, marginBottom: 6 }}>À Renforcer</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: "#991b1b" }}>{mw}</div>
+                  <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 20, display: "inline-block", padding: "2px 10px", marginTop: 6, fontWeight: 700 }}>{mn}/20</div>
+                </div>
+              </div>
+
+              {/* ── INDICATEUR D'EFFORT NÉCESSAIRE (Méthode C) ── */}
+              <div style={{ marginTop: 20 }}>
+                <div style={{ 
+                  fontSize: 14, 
+                  fontWeight: 600, 
+                  color: "#1e293b", 
+                  marginBottom: 12,
+                  paddingBottom: 8,
+                  borderBottom: "2px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}>
+                  <Target size={16} strokeWidth={2.5} />
+                  <span>Indicateur d'effort nécessaire</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>priorité d'amélioration</span>
+                </div>
+
+                <div style={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  gap: 10,
+                  background: "#ffffff",
+                  borderRadius: 16,
+                  border: "1px solid #e2e8f0",
+                  padding: "12px 16px"
+                }}>
+                  {MATIERES.map((matiere) => {
+                    const note = tNotes[matiere];
+                    const coeff = coeffs[matiere];
+                    const nom = matiere;
+                    
+                    let objectif = "";
+                    let objectifColor = "";
+                    let objectifBg = "";
+                    let PriorityIcon = null;
+                    
+                    if (note >= 18) {
+                      objectif = "Maintien";
+                      objectifColor = "#16a34a";
+                      objectifBg = "#f0fdf4";
+                      PriorityIcon = <CheckCircle size={14} color="#16a34a" strokeWidth={2} />;
+                    } else if (note >= 16) {
+                      objectif = "Peut mieux faire";
+                      objectifColor = "#eab308";
+                      objectifBg = "#fefce8";
+                      PriorityIcon = <AlertTriangle size={14} color="#eab308" strokeWidth={2} />;
+                    } else if (note >= 14) {
+                      objectif = "À surveiller";
+                      objectifColor = "#f97316";
+                      objectifBg = "#fff7ed";
+                      PriorityIcon = <Eye size={14} color="#f97316" strokeWidth={2} />;
+                    } else {
+                      objectif = "Priorité d'amélioration";
+                      objectifColor = "#dc2626";
+                      objectifBg = "#fef2f2";
+                      PriorityIcon = <AlertCircle size={14} color="#dc2626" strokeWidth={2} />;
+                    }
+                    
+                    return (
+                      <div 
+                        key={nom}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "10px 0",
+                          borderBottom: "1px solid #f1f5f9"
+                        }}
+                      >
+                        <div style={{ flex: "0 0 140px" }}>
+                          <span style={{ fontWeight: 600, color: "#0f172a" }}>{nom}</span>
+                          <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 6 }}>(×{coeff})</span>
+                        </div>
+                        
+                        <div style={{ 
+                          fontWeight: 700, 
+                          fontSize: 18, 
+                          color: noteColor(note),
+                          width: 50,
+                          textAlign: "center"
+                        }}>
+                          {note}/20
+                        </div>
+                        
+                        <div style={{ 
+                          flex: 1,
+                          marginLeft: 16,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8
+                        }}>
+                          {PriorityIcon}
+                          <span style={{ 
+                            fontSize: 13, 
+                            fontWeight: 500, 
+                            color: objectifColor,
+                            background: objectifBg,
+                            padding: "4px 12px",
+                            borderRadius: 20,
+                            display: "inline-block"
+                          }}>
+                            {objectif}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Légende rapide */}
+                <div style={{
+                  display: "flex",
+                  gap: 16,
+                  marginTop: 12,
+                  padding: "8px 12px",
+                  background: "#f8fafc",
+                  borderRadius: 12,
+                  fontSize: 11,
+                  color: "#475569",
+                  flexWrap: "wrap",
+                  alignItems: "center"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <CheckCircle size={12} color="#16a34a" />
+                    <span>≥18 : Maintien</span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <h3><span style={{ color: "#8b5cf6" }}>📈</span> Évolution (Année)</h3>
-            <div style={{ height: 220, background: "#f8fafc", borderRadius: 14, padding: "10px 10px 0 0", border: "1px solid #f1f5f9" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <YAxis domain={[0, 20]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} width={30} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                  <Line type="monotone" dataKey="moyenne" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <AlertTriangle size={12} color="#eab308" />
+                    <span>16–17 : Peut mieux faire</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Eye size={12} color="#f97316" />
+                    <span>14–15 : À surveiller</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <AlertCircle size={12} color="#dc2626" />
+                    <span>&lt;14 : Priorité</span>
+                  </div>
+                </div>
+              </div>
 
-        <div className="modal-actions">
-          <button className="btn-close-modal" onClick={onClose}>Fermer</button>
-          <button className="btn-close-modal" style={{ background: "#1e293b", color: "#fff", border: "none" }} onClick={() => onEdit(eleve)}>✏️ Modifier</button>
-          <button className="btn-print" onClick={handlePrint}>🖨️ Imprimer</button>
+              {/* mini aperçu barres dans le résumé */}
+              
+            </>
+          )}
+
+          {/* ── TAB NOTES DÉTAILLÉES ── */}
+          {dossierTab === "notes" && (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 12,
+                overflow: "hidden",
+                border: "1px solid #e2e8f0"
+              }}
+            >
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    <th style={thStyle}>Matière</th>
+                    <th style={thStyle}>Coef.</th>
+                    <th style={thStyle}>Note</th>
+                    <th style={thStyle}>Points</th>
+                    <th style={thStyle}>Appréciation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MATIERES.map((mat) => {
+                    const note = tNotes[mat];
+                    const coef = coeffs[mat];
+                    const points = note * coef;
+
+                    let appreciation = "";
+                    let color = "";
+
+                    if (note >= 16) {
+                      appreciation = "Excellent";
+                      color = "#10b981";
+                    } else if (note >= 14) {
+                      appreciation = "Très Bien";
+                      color = "#3b82f6";
+                    } else if (note >= 10) {
+                      appreciation = "Bien";
+                      color = "#f59e0b";
+                    } else {
+                      appreciation = "À renforcer";
+                      color = "#ef4444";
+                    }
+
+                    return (
+                      <tr key={mat}>
+                        <td style={tdStyle}>{mat}</td>
+                        <td style={tdStyle}>{coef}</td>
+                        <td style={{ ...tdStyle, fontWeight: 700 }}>{note}/20</td>
+                        <td style={tdStyle}>{points}</td>
+                        <td style={{ ...tdStyle, color, fontWeight: 700 }}>{appreciation}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ background: "#f8fafc" }}>
+                    <td colSpan="3" style={{ padding: "14px", fontWeight: 800, color: "#1e293b" }}>
+                      Total des points
+                    </td>
+                    <td style={{ padding: "14px", fontWeight: 800, color: "#1e293b" }}>
+                      {MATIERES.reduce((sum, mat) => sum + tNotes[mat] * coeffs[mat], 0)}
+                    </td>
+                    <td style={{ padding: "14px", fontWeight: 800, color: noteColor(m) }}>
+                      Moyenne : {m}/20
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* ACTIONS */}
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Fermer</button>
+            <button onClick={() => onEdit(eleve)} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-pencil" style={{ fontSize: 20 }} /> Modifier
+            </button>
+            <button onClick={handlePrint} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: bg, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-printer" style={{ fontSize: 20 }} /> Imprimer
+            </button>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  </div>
+      </motion.div>
+    </div>
   );
 }
 
-
+/* ─────────────────────────────────────────────
+   PAGE PRINCIPALE
+───────────────────────────────────────────── */
 export default function Notes() {
   const [students, setStudents] = useState(ELEVES);
-
   const [coeffs, setCoeffs] = useState(INITIAL_COEFFS);
   const [notesData, setNotesData] = useState(INITIAL_NOTES);
   const [trimestre, setTrimestre] = useState("T1");
@@ -360,16 +667,17 @@ export default function Notes() {
   const [perPage, setPerPage] = useState(5);
   const [sel, setSel] = useState(null);
   const [editSel, setEditSel] = useState(null);
+  const [editInfoSel, setEditInfoSel] = useState(null);
   const [showCoeffs, setShowCoeffs] = useState(false);
   const [sortDir, setSortDir] = useState("desc");
   const [showNotif, setShowNotif] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showExport, setShowExport] = useState(false);
-
   const [showPeriod, setShowPeriod] = useState(false);
   const [period, setPeriod] = useState("Ce mois");
   const [showInsights, setShowInsights] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
 
   const notifRef = useRef(); const exportRef = useRef(); const periodRef = useRef();
   useOutsideClick(notifRef, () => setShowNotif(false));
@@ -395,8 +703,7 @@ export default function Notes() {
     const m = getMoyenne(notesData[e.id][trimestre]);
     const s = statutInfo(m);
     const matchStatut = statut === "Tous les statuts" || s.l === statut;
-    const matchMat = matiere === "Toutes les matières" || true;
-    return matchClasse && matchSearch && matchStatut && matchMat;
+    return matchClasse && matchSearch && matchStatut;
   }).sort((a, b) => {
     const ma = getMoyenne(notesData[a.id][trimestre]), mb = getMoyenne(notesData[b.id][trimestre]);
     return sortDir === "desc" ? mb - ma : ma - mb;
@@ -426,44 +733,40 @@ export default function Notes() {
     return Math.round((sum / filtered.length) * 100) / 100;
   };
 
-  const getDifficultyCount = () => {
-    return filtered.filter(el => getMoyenne(notesData[el.id][trimestre]) < 10).length;
-  };
+  const getDifficultyCount = () => filtered.filter(el => getMoyenne(notesData[el.id][trimestre]) < 10).length;
 
-  const handleAddStudent = (newStudent) => {
-    // Parse input notes safely
-    const initialNotes = MATIERES.reduce((acc, mat) => {
-      const val = parseFloat(newStudent.notes[mat]);
-      acc[mat] = isNaN(val) ? 0 : val;
-      return acc;
-    }, {});
-
-    const emptyNotes = MATIERES.reduce((acc, mat) => { acc[mat] = 0; return acc; }, {});
-
-    setStudents(prev => [...prev, { id: newStudent.id, nom: newStudent.nom, classe: newStudent.classe }]);
-    setNotesData(prev => ({
-      ...prev,
-      [newStudent.id]: {
-        T1: trimestre === "T1" ? initialNotes : emptyNotes,
-        T2: trimestre === "T2" ? initialNotes : emptyNotes,
-        T3: trimestre === "T3" ? initialNotes : emptyNotes,
-      }
-    }));
+  const handleSaveStudent = (studentData) => {
+    if (studentData.notes) {
+      const initialNotes = MATIERES.reduce((acc, mat) => {
+        const val = parseFloat(studentData.notes[mat]);
+        acc[mat] = isNaN(val) ? 0 : val;
+        return acc;
+      }, {});
+      const emptyNotes = MATIERES.reduce((acc, mat) => { acc[mat] = 0; return acc; }, {});
+      setStudents(prev => [...prev, { id: studentData.id, nom: studentData.nom, classe: studentData.classe }]);
+      setNotesData(prev => ({
+        ...prev,
+        [studentData.id]: {
+          T1: trimestre === "T1" ? initialNotes : emptyNotes,
+          T2: trimestre === "T2" ? initialNotes : emptyNotes,
+          T3: trimestre === "T3" ? initialNotes : emptyNotes,
+        }
+      }));
+    } else {
+      setStudents(prev => prev.map(s => s.id === studentData.id ? studentData : s));
+    }
   };
 
   const handleDelete = (student) => {
     setStudents(prev => prev.filter(s => s.id !== student.id));
-    setNotesData(prev => {
-      const copy = { ...prev };
-      delete copy[student.id];
-      return copy;
-    });
+    setNotesData(prev => { const copy = { ...prev }; delete copy[student.id]; return copy; });
   };
+
   const INSIGHTS = [
-    { icon: "🚨", bg: "#ef4444", t: `${getDifficultyCount()} élèves nécessitent un suivi au ${trimestre}`, d: "Leur moyenne est inférieure à 10/20." },
-    { icon: "📈", bg: "#10b981", t: "Mathématiques coefficient " + coeffs["Mathématiques"], d: "Matière la plus déterminante pour le classement." },
-    { icon: "👑", bg: "#8b5cf6", t: "Terminale A domine", d: "Meilleure performance globale ce trimestre." },
-    { icon: "📘", bg: "#f59e0b", t: "Historique activé", d: "Vous pouvez comparer les T1, T2 et T3." },
+    { icon: <i className="ti ti-alert-triangle" />, bg: "#ef4444", t: `${getDifficultyCount()} élèves nécessitent un suivi au ${trimestre}`, d: "Leur moyenne est inférieure à 10/20." },
+    { icon: <i className="ti ti-trending-up" />, bg: "#10b981", t: "Mathématiques coefficient " + coeffs["Mathématiques"], d: "Matière la plus déterminante pour le classement." },
+    { icon: <i className="ti ti-crown" />, bg: "#8b5cf6", t: "Terminale A domine", d: "Meilleure performance globale ce trimestre." },
+    { icon: <i className="ti ti-history" />, bg: "#f59e0b", t: "Historique activé", d: "Vous pouvez comparer les T1, T2 et T3." },
   ];
 
   return (
@@ -471,13 +774,13 @@ export default function Notes() {
       {/* Top Bar */}
       <div className="notes-topbar">
         <div className="search-box">
-          <span className="s-icon">🔍</span>
+          <i className="ti ti-search s-icon"></i>
           <input placeholder="Rechercher un élève, une classe..." value={topSearch} onChange={e => { setTopSearch(e.target.value); setPage(1); }} />
           <span className="kbd">⌘K</span>
         </div>
         <div className="topbar-right">
           <div className="topbar-info" style={{ display: "flex", gap: 10 }}>
-            <span className="icon-wrap">🏫</span>
+            <i className="ti ti-school" style={{ fontSize: 20, color: "#3b82f6" }}></i>
             <div><div className="label">Lycée Donka</div><div className="sub">Conakry, Guinée</div></div>
           </div>
           <div className="topbar-divider" />
@@ -491,13 +794,13 @@ export default function Notes() {
           </div>
           <div className="topbar-divider" />
           <div style={{ position: "relative" }} ref={notifRef}>
-            <button className="topbar-bell" onClick={() => setShowNotif(v => !v)}>🔔<span className="badge">2</span></button>
+            <button className="topbar-bell" onClick={() => setShowNotif(v => !v)}><i className="ti ti-bell" style={{ fontSize: 20 }}></i><span className="badge">2</span></button>
             <AnimatePresence>
               {showNotif && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="dropdown-panel notif-panel">
                   <div className="dp-title">Notifications</div>
-                  <div className="notif-item"><span>📢</span><div><b>Notes validées</b><p>Le trimestre a été clôturé.</p></div></div>
-                  <div className="notif-item"><span>⚠️</span><div><b>{getDifficultyCount()} élèves en difficulté</b><p>Un suivi est recommandé.</p></div></div>
+                  <div className="notif-item"><i className="ti ti-speakerphone" style={{ fontSize: 20, color: "#3b82f6", marginRight: 8 }} /><div><b>Notes validées</b><p>Le trimestre a été clôturé.</p></div></div>
+                  <div className="notif-item"><i className="ti ti-alert-triangle" style={{ fontSize: 20, color: "#f59e0b", marginRight: 8 }} /><div><b>{getDifficultyCount()} élèves en difficulté</b><p>Un suivi est recommandé.</p></div></div>
                   <button className="dp-link" onClick={() => setShowNotif(false)}>Tout marquer comme lu</button>
                 </motion.div>
               )}
@@ -513,21 +816,21 @@ export default function Notes() {
       {/* Header */}
       <div className="notes-header">
         <div>
-          <h1>Gestion des notes <span style={{ fontSize: 16, color: "#64748b", fontWeight: 600 }}>- {trimestre}</span></h1>
-          <div className="breadcrumb"><span className="active">🏠 Accueil</span><span>›</span><span>Gestion des notes</span></div>
+          <h1>Gestion des notes <span style={{ fontSize: 19, color: "#64748b", fontWeight: 600 }}>- {trimestre}</span></h1>
+          <div className="breadcrumb"><span className="active">Accueil</span><span>›</span><span>Gestion des notes</span></div>
         </div>
         <div className="header-actions">
-          <button className="btn-outline" onClick={() => setShowCoeffs(true)}>⚙️ Coefficients</button>
-          <button className="btn-outline" onClick={() => setShowAdd(true)}>➕ Ajouter élève</button>
-          <button className="btn-outline" onClick={() => window.print()}>🖨️ Imprimer</button>
+          <button className="btn-outline" onClick={() => setShowCoeffs(true)}><i className="ti ti-settings" /> Coefficients</button>
+          <button className="btn-outline" onClick={() => setShowAdd(true)}><i className="ti ti-plus" /> Ajouter élève</button>
+          <button className="btn-outline" onClick={() => window.print()}><i className="ti ti-printer" /> Imprimer</button>
           <div style={{ position: "relative" }} ref={exportRef}>
-            <button className="btn-primary" onClick={() => setShowExport(v => !v)}>📥 Exporter ▾</button>
+            <button className="btn-primary" onClick={() => setShowExport(v => !v)}><i className="ti ti-download" /> Exporter ▾</button>
             <AnimatePresence>
               {showExport && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="dropdown-panel" style={{ right: 0, minWidth: 160 }}>
                   <div className="dp-title">Exporter {trimestre}</div>
-                  <button onClick={() => { exportCSV(); setShowExport(false); }}>📊 CSV (.csv)</button>
-                  <button onClick={() => { window.print(); setShowExport(false); }}>📄 PDF (imprimer)</button>
+                  <button onClick={() => { exportCSV(); setShowExport(false); }}><i className="ti ti-file-text" style={{ marginRight: 6 }} /> CSV (.csv)</button>
+                  <button onClick={() => { window.print(); setShowExport(false); }}><i className="ti ti-printer" style={{ marginRight: 6 }} /> PDF (imprimer)</button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -539,17 +842,15 @@ export default function Notes() {
       <div className="stats-grid">
         <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top">
-            <div className="icon-box" style={{ background: "#eff6ff", color: "#3b82f6" }}>📊</div>
+            <div className="icon-box" style={{ background: "#eff6ff", color: "#3b82f6" }}><i className="ti ti-chart-bar" style={{ fontSize: 22 }}></i></div>
             <div><div className="stat-label">Moyenne générale</div><div className="stat-value">{getGlobalMoyenne()} <span className="unit">/20</span></div></div>
           </div>
-          <div className="bottom">
-            <div><div className="trend up">Toutes les classes confondues</div></div>
-          </div>
+          <div className="bottom"><div><div className="trend up">Toutes les classes confondues</div></div></div>
         </motion.div>
         <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top" style={{ justifyContent: "space-between", display: "flex", width: "100%" }}>
             <div style={{ display: "flex", gap: 14 }}>
-              <div className="icon-box" style={{ background: "#ecfdf5", color: "#10b981" }}>🎯</div>
+              <div className="icon-box" style={{ background: "#ecfdf5", color: "#10b981" }}><i className="ti ti-target" style={{ fontSize: 22 }}></i></div>
               <div><div className="stat-label">Taux de réussite</div><div className="stat-value">{Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%</div></div>
             </div>
             <CircleProgress pct={Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)} color="#10b981" label={`${Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%`} />
@@ -559,7 +860,7 @@ export default function Notes() {
         <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top" style={{ justifyContent: "space-between", display: "flex", width: "100%" }}>
             <div style={{ display: "flex", gap: 14 }}>
-              <div className="icon-box" style={{ background: "#fef2f2", color: "#ef4444" }}>⚠️</div>
+              <div className="icon-box" style={{ background: "#fef2f2", color: "#ef4444" }}><i className="ti ti-alert-triangle" style={{ fontSize: 22 }}></i></div>
               <div><div className="stat-label">Élèves en difficulté</div><div className="stat-value">{getDifficultyCount()}</div></div>
             </div>
             <CircleProgress pct={Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)} color="#ef4444" label={`${Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)}%`} />
@@ -568,8 +869,8 @@ export default function Notes() {
         </motion.div>
         <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top">
-            <div className="icon-box" style={{ background: "#faf5ff", color: "#8b5cf6" }}>🏆</div>
-            <div><div className="stat-label">Classement</div><div className="stat-value" style={{ color: "#3b82f6", fontSize: 20 }}>Mis à jour</div><div className="stat-sub">Automatique via Coefficients</div></div>
+            <div className="icon-box" style={{ background: "#faf5ff", color: "#8b5cf6" }}><i className="ti ti-award" style={{ fontSize: 22 }}></i></div>
+            <div><div className="stat-label">Classement</div><div className="stat-value" style={{ color: "#3b82f6", fontSize: 23 }}>Mis à jour</div><div className="stat-sub">Automatique via Coefficients</div></div>
           </div>
           <div className="bottom">
             <div className="trend up">Système actif</div>
@@ -593,8 +894,8 @@ export default function Notes() {
             {EVO.map((d, i) => (
               <div className="bar-group" key={i}>
                 <div className="bar-pair">
-                  <div className="bar current" style={{ height: `${(d.moy / 20) * 180}px` }}>{d.moy}</div>
-                  <div className="bar previous" style={{ height: `${(d.prev / 20) * 180}px` }}>{d.prev}</div>
+                  <div className="bar current" style={{ height: `${(d.moy / 20) * 280}px` }}>{d.moy}</div>
+                  <div className="bar previous" style={{ height: `${(d.prev / 20) * 280}px` }}>{d.prev}</div>
                 </div>
                 <div className="bar-label">{d.classe}</div>
               </div>
@@ -641,17 +942,18 @@ export default function Notes() {
         </div>
         <div className="filter-right">
           <div className="search-input">
-            <span className="icon">🔍</span>
+            <i className="ti ti-search icon"></i>
             <input placeholder="Rechercher un élève..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
           </div>
           <button className="btn-reset" onClick={resetFilters}>↺ Réinitialiser</button>
         </div>
       </div>
 
+
       {/* Table */}
       <div className="table-section">
         <div className="table-header">
-          <h2>Liste des élèves <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>({filtered.length})</span></h2>
+          <h2>Liste des élèves <span style={{ fontSize: 16, color: "#94a3b8", fontWeight: 500 }}>({filtered.length})</span></h2>
           <div className="table-actions">
             <select onChange={e => setSortDir(e.target.value)} value={sortDir}>
               <option value="desc">Trier par moyenne ↓</option>
@@ -659,14 +961,18 @@ export default function Notes() {
             </select>
           </div>
         </div>
-        <div style={{ overflowX: "auto" }}>
+
+        {/* ⬇️ conteneur scrollable, comme sur la page paiement */}
+        <div style={{ maxHeight: 320, overflowY: "auto", overflowX: "auto", borderRadius: 8 }}>
           <table className="notes-table">
-            <thead><tr>
-              <th style={{ width: 40 }}>#</th>
-              <th>ÉLÈVE ↕</th>
-              {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(m => <th key={m} title={`Coefficient ${coeffs[m]}`}>{MAT_ABR[m]}</th>)}
-              <th>MOYENNE ↕</th><th>STATUT ↕</th><th>ACTIONS</th>
-            </tr></thead>
+            <thead style={{ position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
+              <tr>
+                <th style={{ width: 40 }}>#</th>
+                <th>ÉLÈVE ↕</th>
+                {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(m => <th key={m} title={`Coefficient ${coeffs[m]}`}>{MAT_ABR[m]}</th>)}
+                <th>MOYENNE ↕</th><th>STATUT ↕</th><th>ACTIONS</th>
+              </tr>
+            </thead>
             <tbody>
               <AnimatePresence>
                 {shown.map((el, i) => {
@@ -678,45 +984,55 @@ export default function Notes() {
                       {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(mat => { const n = notesData[el.id][trimestre][mat]; return <td key={mat}><span className="note-val" style={{ color: noteColor(n) }}>{n}</span></td>; })}
                       <td><span className="moy-val" style={{ color: noteColor(m) }}>{m}</span></td>
                       <td><span className="statut-badge" style={{ color: s.c }}>{s.l}</span></td>
-                      <td><div className="actions-cell" style={{ position: "relative" }}>
-                        <button className="action-btn" onClick={() => setSel(el)} title="Voir (Notes & Graphiques)">👁</button>
-                        <button className="action-btn" onClick={() => setEditSel(el)} title="Saisir / Modifier les notes">✏️</button>
-                        <button className="action-btn" title="Plus" onClick={() => setCtxMenu(ctxMenu === el.id ? null : el.id)}>⋮</button>
-                        {ctxMenu === el.id && <ContextMenu eleve={el} onClose={() => setCtxMenu(null)} onView={setSel} onEdit={setEditSel} onDelete={() => handleDelete(el)} onPrint={() => { }} />}
+                      <td><div className="actions-cell" style={{ position: "relative", display: "flex", gap: 6 }}>
+                        <button onClick={() => setSel(el)} style={{ background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+                          <i className="ti ti-eye" /> Voir
+                        </button>
+                        <button onClick={() => setEditSel(el)} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                          <i className="ti ti-pencil" />
+                        </button>
+                        <button onClick={() => setConfirmDel(el)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                          <i className="ti ti-trash" />
+                        </button>
+                        <button title="Plus" onClick={() => setCtxMenu(ctxMenu === el.id ? null : el.id)} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}>
+                          <i className="ti ti-dots-vertical" />
+                        </button>
+                        {ctxMenu === el.id && <ContextMenu eleve={el} onClose={() => setCtxMenu(null)} onView={setSel} onEdit={setEditSel} onEditInfo={setEditInfoSel}   />}
                       </div></td>
                     </motion.tr>
                   );
                 })}
               </AnimatePresence>
-              {shown.length === 0 && <tr><td colSpan={(matiere === "Toutes les matières" ? MATIERES : [matiere]).length + 5} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>Aucun élève trouvé</td></tr>}
+              {shown.length === 0 && (
+                <tr>
+                  <td colSpan={(matiere === "Toutes les matières" ? MATIERES : [matiere]).length + 5} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
+                    Aucun élève trouvé
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-        <div className="pagination">
-          <span>Affichage de {filtered.length === 0 ? 0 : (safePage - 1) * perPage + 1} à {Math.min(safePage * perPage, filtered.length)} sur {filtered.length} élèves</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div className="page-buttons">
-              <button className="page-nav" disabled={safePage === 1} onClick={() => setPage(p => p - 1)}>◂</button>
-              {Array.from({ length: pages }, (_, i) => i + 1).map(p => (
-                <button key={p} className={`page-btn${safePage === p ? " active" : ""}`} onClick={() => setPage(p)}>{p}</button>
-              ))}
-              <button className="page-nav" disabled={safePage === pages} onClick={() => setPage(p => p + 1)}>▸</button>
-            </div>
-            <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}>
-              <option value={5}>5 / page</option>
-              <option value={10}>10 / page</option>
-              <option value={25}>25 / page</option>
-            </select>
-          </div>
-        </div>
+
+       
       </div>
 
+      {/* Modales */}
       <AnimatePresence>
         {sel && <Modal key="view" eleve={sel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} getMoyenne={getMoyenne} onClose={() => setSel(null)} onEdit={(e) => { setSel(null); setTimeout(() => setEditSel(e), 150); }} />}
         {editSel && <EditModal key="edit" eleve={editSel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} setNotesData={setNotesData} onClose={() => setEditSel(null)} />}
         {showCoeffs && <CoeffModal key="coeffs" coeffs={coeffs} setCoeffs={setCoeffs} onClose={() => setShowCoeffs(false)} />}
-        {showAdd && <AddStudentModal onClose={() => setShowAdd(false)} onAdd={handleAddStudent} classes={CLASSES} trimestre={trimestre} />}
+        {showAdd && <StudentModal key="add" onClose={() => setShowAdd(false)} onSave={handleSaveStudent} classes={CLASSES} trimestre={trimestre} />}
+        {editInfoSel && <StudentModal key="editInfo" initialStudent={editInfoSel} onClose={() => setEditInfoSel(null)} onSave={handleSaveStudent} classes={CLASSES} trimestre={trimestre} />}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={!!confirmDel}
+        title="Supprimer l'élève"
+        message={confirmDel ? `Voulez-vous vraiment supprimer ${confirmDel.nom} ? Toutes ses notes seront perdues.` : ""}
+        onConfirm={() => { handleDelete(confirmDel); setConfirmDel(null); }}
+        onCancel={() => setConfirmDel(null)}
+      />
     </div>
   );
 }
