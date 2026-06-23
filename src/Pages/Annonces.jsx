@@ -4,7 +4,7 @@ import { useState } from "react";
 const t = {
   bg:"#f7f8fa", surface:"#ffffff", border:"#eaecf0",
   blue:"#2563eb", blueSoft:"#eff6ff", blueMid:"#dbeafe",
-  text:"#111827", sub:"#6b7280", muted:"#9ca3af",
+  text:"#111827", sub:"#6b7280", muted:"#9ca3af", 
   green:"#059669", greenSoft:"#f0fdf4",
   amber:"#d97706", amberSoft:"#fffbeb",
   red:"#dc2626", redSoft:"#fef2f2",
