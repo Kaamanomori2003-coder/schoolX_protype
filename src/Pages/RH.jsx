@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNotifications } from "../context/NotificationsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import "./Notes.css";
 import ConfirmModal from "../components/ConfirmModal";
@@ -259,6 +260,7 @@ function renderAvatar(e, size = 60, fontSize = 18) {
 }
 
 export default function RH() {
+  
   const [activeTab, setActiveTab] = useState("effectifs"); // effectifs | fiches | presences | conges | salaires | recrutement
   const [employes, setEmployes] = useState(initialEmployes);
   const [candidates, setCandidates] = useState(initialCandidates);
@@ -298,7 +300,18 @@ export default function RH() {
     { id: 2, type: "anniv", text: "Anniversaire aujourd'hui : Mme Fatoumata Bah (Physique) !", date: "Aujourd'hui" },
     { id: 3, type: "absences", text: "Alerte absentéisme : Mariama Condé a accumulé 4 absences ce mois-ci.", date: "Hier" },
   ]);
-
+  const { addNotification } = useNotifications();
+    useEffect(() => {
+      alerts.forEach(a => {
+        addNotification({
+          id: `rh-${a.id}`,
+          source: "Gestion RH",
+          titre: a.type === "cdd" ? "Contrat CDD bientôt expiré" : a.type === "anniv" ? "Anniversaire" : "Alerte absentéisme",
+          message: a.text,
+          date: a.date,
+        });
+      });
+    }, []); // une seule fois au montage — addNotification ignore déjà les doublons par id
   // Modals States
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [showAddCandidateModal, setShowAddCandidateModal] = useState(false);

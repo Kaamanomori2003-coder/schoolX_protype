@@ -3,23 +3,6 @@ export const MAT_ABR = {Mathématiques:"MATHS",Physique:"PHYSIQUE",Français:"FR
 export const MAT_CLR = {Mathématiques:"#3b82f6",Physique:"#06b6d4",Français:"#8b5cf6",Philosophie:"#f59e0b",SVT:"#10b981",Chimie:"#ef4444"};
 export const COEFFS = {Mathématiques: 5, Physique: 4, Français: 3, Philosophie: 2, SVT: 3, Chimie: 3};
 
-export const CLASSES = ["Terminale A","Terminale B","Seconde A","Seconde B","Première A"];
-export const ELEVES = [
-  {id:1,nom:"Aminata Diallo",classe:"Terminale A"},{id:2,nom:"Ibrahima Konaté",classe:"Terminale A"},
-  {id:3,nom:"Fatoumata Bah",classe:"Terminale A"},{id:4,nom:"Mamadou Sow",classe:"Terminale A"},
-  {id:5,nom:"Aissatou Barry",classe:"Terminale A"},{id:6,nom:"Oumar Diallo",classe:"Terminale B"},
-  {id:7,nom:"Mariama Kouyaté",classe:"Terminale B"},{id:8,nom:"Thierno Baldé",classe:"Terminale B"},
-  {id:9,nom:"Kadiatou Camara",classe:"Terminale B"},{id:10,nom:"Seydou Traoré",classe:"Terminale B"},
-  {id:11,nom:"Hawa Diakité",classe:"Seconde A"},{id:12,nom:"Boubacar Sylla",classe:"Seconde A"},
-  {id:13,nom:"Néné Kourouma",classe:"Seconde A"},{id:14,nom:"Alpha Condé",classe:"Seconde A"},
-  {id:15,nom:"Rougui Diallo",classe:"Seconde A"},{id:16,nom:"Lansana Touré",classe:"Seconde B"},
-  {id:17,nom:"Hadja Bah",classe:"Seconde B"},{id:18,nom:"Mamou Barry",classe:"Seconde B"},
-  {id:19,nom:"Cheick Camara",classe:"Seconde B"},{id:20,nom:"Binta Diallo",classe:"Seconde B"},
-  {id:21,nom:"Saliou Konaté",classe:"Première A"},{id:22,nom:"Oumou Traoré",classe:"Première A"},
-  {id:23,nom:"Djenab Bah",classe:"Première A"},{id:24,nom:"Ibou Soumah",classe:"Première A"},
-  {id:25,nom:"Kadija Camara",classe:"Première A"},
-];
-
 const baseNotes = {
   1:{Mathématiques:15.5,Physique:13,Français:16,Philosophie:14,SVT:12,Chimie:11},
   2:{Mathématiques:8,Physique:7.5,Français:9,Philosophie:6,SVT:8,Chimie:7},

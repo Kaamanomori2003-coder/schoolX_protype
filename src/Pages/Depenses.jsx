@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNotifications } from "../context/NotificationsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import ConfirmModal from "../components/ConfirmModal";
 
@@ -191,6 +192,19 @@ function Modal({ onClose, onSave, nextId, initialData }) {
       onSave({ id:nextId, cat:form.cat, desc:form.desc, montant:parseInt(form.montant), date:formattedDate, statut:"En attente", resp:form.resp||"Non défini", motif: form.motif, fileName: form.fileName });
     }
   };
+  const { addNotification } = useNotifications();
+
+  useEffect(() => {
+    alerts.forEach(a => {
+      addNotification({
+        id: `rh-${a.id}`,
+        source: "Gestion RH",
+        titre: a.type === "cdd" ? "Contrat CDD bientôt expiré" : a.type === "anniv" ? "Anniversaire" : "Alerte absentéisme",
+        message: a.text,
+        date: a.date,
+      });
+    });
+  }, []); // une seule fois au montage — addNotification ignore déjà les doublons par id
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CLASSES, STUDENTS, getNomComplet, getInitials } from "./studentsData";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
@@ -25,95 +26,46 @@ const t = {
 };
 
 /* ─── DATA ───────────────────────────────────────────────────── */
-const DATA = [
-  {
-    id:1, prenom:"Aminata", nom:"Diallo", sexe:"F",
-    dateNaissance:"12/03/2006", classe:"Terminale A",
-    numero:"621 00 11 22", email:"aminata.diallo@email.com",
-    tuteur:"Mamadou Diallo", numeroTuteur:"622 11 22 33",
-    adresse:"Ratoma, Conakry", matricule:"SCX-2024-001",
-    status:"Actif", initials:"AD", moyenne:15.2,
-    notes:[
-      {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:16,coef:5},
-      {matiere:"Français",     prof:"Mme Fatoumata Bah", note:14,coef:4},
-      {matiere:"Physique",     prof:"M. Ousmane Kouyaté",note:15,coef:4},
-      {matiere:"Anglais",      prof:"Mme Aïssatou Sow",  note:17,coef:3},
-    ],
-    presences:{present:42,absent:3,retard:2,total:47},
-    paiements:{total:1500000,paye:1000000,historique:[
-      {date:"02/01/2025",montant:500000,mode:"Espèces", status:"Payé"},
-      {date:"05/02/2025",montant:500000,mode:"Mobile",  status:"Payé"},
-      {date:"01/03/2025",montant:500000,mode:"Virement",status:"En attente"},
-    ]},
-  },
-  {
-    id:2, prenom:"Mamadou", nom:"Bah", sexe:"M",
-    dateNaissance:"25/07/2009", classe:"3ème B",
-    numero:"622 33 44 55", email:"mamadou.bah@email.com",
-    tuteur:"Ibrahima Bah", numeroTuteur:"623 44 55 66",
-    adresse:"Kaloum, Conakry", matricule:"SCX-2024-002",
-    status:"Actif", initials:"MB", moyenne:12.0,
-    notes:[
-      {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:11,coef:5},
-      {matiere:"Français",     prof:"Mme Fatoumata Bah", note:13,coef:4},
-      {matiere:"Histoire-Géo", prof:"M. Ibrahima Camara",note:12,coef:3},
-    ],
-    presences:{present:38,absent:7,retard:4,total:49},
-    paiements:{total:1200000,paye:600000,historique:[
-      {date:"03/01/2025",montant:600000,mode:"Espèces",status:"Payé"},
-      {date:"01/02/2025",montant:600000,mode:"Mobile", status:"En attente"},
-    ]},
-  },
-  {
-    id:3, prenom:"Fatoumata", nom:"Camara", sexe:"F",
-    dateNaissance:"08/11/2008", classe:"Seconde C",
-    numero:"623 55 66 77", email:"fatoumata.c@email.com",
-    tuteur:"Sékou Camara", numeroTuteur:"624 66 77 88",
-    adresse:"Matam, Conakry", matricule:"SCX-2024-003",
-    status:"Actif", initials:"FC", moyenne:14.6,
-    notes:[
-      {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",  note:14,coef:5},
-      {matiere:"SVT",          prof:"Mme Kadiatou Traoré", note:16,coef:3},
-      {matiere:"Physique",     prof:"M. Ousmane Kouyaté",  note:13,coef:4},
-    ],
-    presences:{present:44,absent:1,retard:1,total:46},
-    paiements:{total:1350000,paye:1350000,historique:[
-      {date:"02/01/2025",montant:675000,mode:"Espèces",status:"Payé"},
-      {date:"03/02/2025",montant:675000,mode:"Mobile", status:"Payé"},
-    ]},
-  },
-  {
-    id:4, prenom:"Ibrahima", nom:"Sow", sexe:"M",
-    dateNaissance:"15/05/2005", classe:"Terminale D",
-    numero:"624 77 88 99", email:"ibrahima.sow@email.com",
-    tuteur:"Oumar Sow", numeroTuteur:"625 88 99 00",
-    adresse:"Dixinn, Conakry", matricule:"SCX-2024-004",
-    status:"Inactif", initials:"IS", moyenne:8.0,
-    notes:[
-      {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:7,coef:5},
-      {matiere:"Français",     prof:"Mme Fatoumata Bah", note:9,coef:4},
-    ],
-    presences:{present:25,absent:20,retard:8,total:53},
-    paiements:{total:1500000,paye:0,historique:[]},
-  },
-  {
-    id:5, prenom:"Mariama", nom:"Kouyaté", sexe:"F",
-    dateNaissance:"20/09/2007", classe:"1ère S",
-    numero:"625 11 22 33", email:"mariama.k@email.com",
-    tuteur:"Lansana Kouyaté", numeroTuteur:"626 22 33 44",
-    adresse:"Lambanyi, Conakry", matricule:"SCX-2024-005",
-    status:"Actif", initials:"MK", moyenne:17.2,
-    notes:[
-      {matiere:"SVT",           prof:"Mme Kadiatou Traoré",note:18,coef:3},
-      {matiere:"Mathématiques", prof:"Dr. Mamadou Diallo", note:16,coef:5},
-      {matiere:"Physique",      prof:"M. Ousmane Kouyaté", note:17,coef:4},
-    ],
-    presences:{present:45,absent:0,retard:1,total:46},
-    paiements:{total:1400000,paye:1400000,historique:[
-      {date:"02/01/2025",montant:1400000,mode:"Virement",status:"Payé"},
-    ]},
-  },
-];
+const NOTES_PAR_DEFAUT = {
+  1: [
+    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:16,coef:5},
+    {matiere:"Français",     prof:"Mme Fatoumata Bah", note:14,coef:4},
+    {matiere:"Physique",     prof:"M. Ousmane Kouyaté",note:15,coef:4},
+    {matiere:"Anglais",      prof:"Mme Aïssatou Sow",  note:17,coef:3},
+  ],
+  2: [
+    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:11,coef:5},
+    {matiere:"Français",     prof:"Mme Fatoumata Bah", note:13,coef:4},
+    {matiere:"Histoire-Géo", prof:"M. Ibrahima Camara",note:12,coef:3},
+  ],
+  3: [
+    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",  note:14,coef:5},
+    {matiere:"SVT",          prof:"Mme Kadiatou Traoré", note:16,coef:3},
+    {matiere:"Physique",     prof:"M. Ousmane Kouyaté",  note:13,coef:4},
+  ],
+};
+
+const PAIEMENTS_PAR_DEFAUT = {
+  1: { total:1500000, paye:1000000, historique:[
+    {date:"02/01/2025",montant:500000,mode:"Espèces", status:"Payé"},
+    {date:"05/02/2025",montant:500000,mode:"Mobile",  status:"Payé"},
+    {date:"01/03/2025",montant:500000,mode:"Virement",status:"En attente"},
+  ]},
+  2: { total:1200000, paye:600000, historique:[
+    {date:"03/01/2025",montant:600000,mode:"Espèces",status:"Payé"},
+    {date:"01/02/2025",montant:600000,mode:"Mobile", status:"En attente"},
+  ]},
+};
+
+const DATA = STUDENTS.map(s => ({
+  ...s,
+  initials: getInitials(s),
+  moyenne: NOTES_PAR_DEFAUT[s.id]
+    ? Math.round((NOTES_PAR_DEFAUT[s.id].reduce((a,n)=>a+n.note*n.coef,0) / NOTES_PAR_DEFAUT[s.id].reduce((a,n)=>a+n.coef,0)) * 10) / 10
+    : 0,
+  notes: NOTES_PAR_DEFAUT[s.id] || [],
+  paiements: PAIEMENTS_PAR_DEFAUT[s.id] || { total: 0, paye: 0, historique: [] },
+}));
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
 const noteColor = (n) =>
@@ -213,28 +165,170 @@ function Profil({eleve, onRetour}) {
     ? (eleve.notes.reduce((a,n)=>a+n.note*n.coef,0) / eleve.notes.reduce((a,n)=>a+n.coef,0)).toFixed(2)
     : "—";
 
-  const downloadBulletin = () => {
-    const txt = [
-      "BULLETIN DE NOTES — SchoolX",
-      `Année scolaire 2024/2025`,
-      "─".repeat(44),
-      `Nom      : ${eleve.prenom} ${eleve.nom}`,
-      `Matricule: ${eleve.matricule}`,
-      `Classe   : ${eleve.classe}`,
-      "─".repeat(44),
-      ...eleve.notes.map(n=>`${n.matiere.padEnd(22)} ${String(n.note).padStart(2)}/20  ×${n.coef}  ${noteLabel(n.note)}`),
-      "─".repeat(44),
-      `Moyenne pondérée : ${moy}/20`,
-      `Présences        : ${eleve.presences.present}/${eleve.presences.total} (${tPres}%)`,
-      "─".repeat(44),
-      `Généré le ${new Date().toLocaleDateString("fr-FR")} — SchoolX`,
-    ].join("\n");
-    const a = Object.assign(document.createElement("a"),{
-      href:URL.createObjectURL(new Blob([txt],{type:"text/plain;charset=utf-8"})),
-      download:`Bulletin_${eleve.prenom}_${eleve.nom}.txt`,
+    const loadJsPDF = () => new Promise((resolve) => {
+  if (window.jspdf) return resolve(window.jspdf.jsPDF);
+  const script = document.createElement("script");
+  script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  script.onload = () => resolve(window.jspdf.jsPDF);
+  document.head.appendChild(script);
+});
+
+const downloadBulletin = () => {
+  loadJsPDF().then((JsPDF) => {
+    const doc = new JsPDF({ unit: "mm", format: "a4" });
+    const pageWidth = 210;
+    const marginX = 15;
+    let y = 18;
+
+    const notes = eleve.notes.length ? eleve.notes : [];
+    const meilleure = notes.length ? notes.reduce((a, n) => n.note > a.note ? n : a, notes[0]) : null;
+    const faible = notes.length ? notes.reduce((a, n) => n.note < a.note ? n : a, notes[0]) : null;
+
+    // ── EN-TÊTE ÉCOLE ──
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("SchoolX", marginX, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Lycée Donka — Conakry, Guinée", marginX, y + 5);
+
+    doc.setFontSize(10);
+    doc.text(`Émis le ${new Date().toLocaleDateString("fr-FR")}`, pageWidth - marginX, y, { align: "right" });
+    y += 10;
+    doc.setDrawColor(200);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text("BULLETIN DE NOTES — Année 2024/2025", pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    // ── BANDEAU INFOS ÉLÈVE ──
+    doc.setDrawColor(220);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(marginX, y, pageWidth - marginX * 2, 36, 2, 2, "F");
+
+    const infoY = y + 7;
+    const col1 = marginX + 4;
+    const col2 = marginX + 95;
+    doc.setFontSize(9);
+
+    const infoLine = (label, value, x, yy) => {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120);
+      doc.text(label, x, yy);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(20);
+      doc.text(String(value), x, yy + 4.5);
+    };
+
+    infoLine("Nom complet", `${eleve.prenom} ${eleve.nom}`, col1, infoY);
+    infoLine("Matricule", eleve.matricule, col2, infoY);
+    infoLine("Classe", eleve.classe, col1, infoY + 10);
+    infoLine("Sexe", eleve.sexe === "M" ? "Masculin" : "Féminin", col2, infoY + 10);
+    infoLine("Présences", `${eleve.presences.present}/${eleve.presences.total} (${tPres}%)`, col1, infoY + 20);
+    infoLine("Statut", eleve.status, col2, infoY + 20);
+
+    y += 42;
+
+    // ── TABLEAU DES NOTES ──
+    const tableX = marginX;
+    const tableW = pageWidth - marginX * 2;
+    const colW = [65, 50, 25, tableW - 65 - 50 - 25];
+    const rowH = 8;
+
+    doc.setFillColor(37, 99, 235);
+    doc.rect(tableX, y, tableW, rowH, "F");
+    doc.setTextColor(255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    let x = tableX + 3;
+    ["Matière", "Professeur", "Note", "Appréciation"].forEach((h, i) => {
+      doc.text(h, x, y + 5.5);
+      x += colW[i];
     });
-    a.click();
-  };
+    y += rowH;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    notes.forEach((n, idx) => {
+      if (idx % 2 === 1) {
+        doc.setFillColor(250, 250, 251);
+        doc.rect(tableX, y, tableW, rowH, "F");
+      }
+      doc.setTextColor(20);
+      x = tableX + 3;
+      doc.text(n.matiere, x, y + 5.5); x += colW[0];
+      doc.text(n.prof || "—", x, y + 5.5); x += colW[1];
+      doc.text(`${n.note}/20`, x, y + 5.5); x += colW[2];
+      doc.text(noteLabel(n.note), x, y + 5.5);
+      y += rowH;
+    });
+
+    // Moyenne pondérée
+    doc.setFillColor(239, 246, 255);
+    doc.rect(tableX, y, tableW, rowH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235);
+    doc.text("Moyenne pondérée", tableX + 3, y + 5.5);
+    doc.text(`${moy}/20`, tableX + colW[0] + colW[1] + 3, y + 5.5);
+    y += rowH + 6;
+
+    // Point fort / à renforcer
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    if (meilleure) {
+      doc.setTextColor(22, 163, 74);
+      doc.text(`Point fort : ${meilleure.matiere} (${meilleure.note}/20)`, tableX, y);
+    }
+    if (faible) {
+      doc.setTextColor(220, 38, 38);
+      doc.text(`À renforcer : ${faible.matiere} (${faible.note}/20)`, tableX + tableW / 2, y);
+    }
+    y += 6;
+
+    doc.setTextColor(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Statut général : ", tableX, y);
+    doc.text(noteLabel(parseFloat(moy)), tableX + 32, y);
+    y += 10;
+
+    // ── BLOC SIGNATURES ──
+    const sigY = Math.min(y + 8, 215);
+    doc.setDrawColor(180);
+    doc.line(marginX, sigY, pageWidth - marginX, sigY);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text("Fait à Conakry, le " + new Date().toLocaleDateString("fr-FR"), marginX, sigY + 6);
+
+    const sigBoxW = 75;
+    const sigBoxY = sigY + 14;
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(20);
+    doc.text("Le Directeur", marginX + sigBoxW / 2, sigBoxY, { align: "center" });
+    doc.text("Le Tuteur / Parent", pageWidth - marginX - sigBoxW / 2, sigBoxY, { align: "center" });
+
+    doc.setDrawColor(150);
+    doc.line(marginX, sigBoxY + 18, marginX + sigBoxW, sigBoxY + 18);
+    doc.line(pageWidth - marginX - sigBoxW, sigBoxY + 18, pageWidth - marginX, sigBoxY + 18);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text("Signature et cachet", marginX + sigBoxW / 2, sigBoxY + 22, { align: "center" });
+    doc.text(eleve.tuteur || "Signature", pageWidth - marginX - sigBoxW / 2, sigBoxY + 22, { align: "center" });
+
+    doc.setFontSize(7.5);
+    doc.setTextColor(180);
+    doc.text("Généré automatiquement par SchoolX — document à usage interne", pageWidth / 2, 290, { align: "center" });
+
+    doc.save(`Bulletin_${eleve.prenom}_${eleve.nom}.pdf`);
+  });
+};
 
   return (
      <div style={{fontFamily:t.font,color:t.text,maxWidth:"860px",margin:"0 auto"}}>
