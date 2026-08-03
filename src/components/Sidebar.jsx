@@ -29,7 +29,6 @@ const menuGroups = [
   {
     group: "Communication",
     items: [
-      { label: "Notifications",          icon: "ti-bell"        },
       { label: "Messages",               icon: "ti-message"     },
       { label: "Annonces",               icon: "ti-speakerphone"},
     ],
