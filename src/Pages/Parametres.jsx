@@ -1,19 +1,11 @@
 import { useState, useEffect } from "react";
+import { useToast } from "../context/ToastContext";
 
-/* ═══════════════════════════════════════════════
-   UTILITIES
-═══════════════════════════════════════════════ */
+let globalShowToast = null;
 const notify = (msg, type = "success") => {
-  const id = Date.now();
-  const div = document.createElement("div");
-  div.id = `notification-${id}`;
-  const bgColor = type === "success" ? "#dcfce7" : "#fee2e2";
-  const textColor = type === "success" ? "#166534" : "#991b1b";
-  const icon = type === "success" ? "✓" : "✕";
-  div.style.cssText = `position: fixed; top: 20px; right: 20px; background: ${bgColor}; color: ${textColor}; padding: 12px 16px; borderRadius: 8px; fontSize: 16px; fontWeight: 500; zIndex: 9999; display: flex; alignItems: center; gap: 8px; boxShadow: 0 4px 12px rgba(0,0,0,0.1);`;
-  div.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 3500);
+  if (globalShowToast) {
+    globalShowToast(msg, type);
+  }
 };
 
 /* ═══════════════════════════════════════════════
@@ -1003,6 +995,8 @@ const SECTIONS = {
 };
 
 export default function Parametres() {
+  const { showToast } = useToast();
+  globalShowToast = showToast;
   const [active, setActive] = useState("etablissement");
   const Section = SECTIONS[active];
 

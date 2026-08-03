@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications, PAGE_META, DEFAULT_META } from "../context/NotificationsContext";
 
-export default function Navbar({ page, collapsed, onNavigate , trimestre, setTrimestre }) {
-  const [search, setSearch] = useState("");
+export default function Navbar({ page, collapsed, onNavigate, trimestre, setTrimestre, searchValue = "", onSearch }) {
+  const search = searchValue;
   const [showMenu, setShowMenu] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = useRef();
@@ -56,29 +56,42 @@ export default function Navbar({ page, collapsed, onNavigate , trimestre, setTri
       <div style={{ position: "relative", width: 320 }}>
         <i className="ti ti-search" style={{
           position: "absolute", left: 12, top: "50%",
-          transform: "translateY(-50%)", color: "#94a3b8", fontSize: 16
+          transform: "translateY(-50%)", color: page === "Guide d'utilisation" && search ? "#1a3ed4" : "#94a3b8", fontSize: 16,
+          transition: "color 0.2s"
         }} />
         <input
           type="text"
-          placeholder="Rechercher..."
+          placeholder={page === "Guide d'utilisation" ? "Rechercher dans le guide..." : "Rechercher..."}
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => onSearch && onSearch(e.target.value)}
           style={{
             width: "100%",
             padding: "9px 14px 9px 36px",
-            border: "1px solid #e2e8f0",
+            border: `1px solid ${page === "Guide d'utilisation" && search ? "#1a3ed4" : "#e2e8f0"}`,
             borderRadius: 10,
             fontSize: 13,
             outline: "none",
-            background: "#f8fafc",
+            background: page === "Guide d'utilisation" && search ? "#f0f4ff" : "#f8fafc",
             color: "#0f172a",
             fontFamily: "'Outfit', sans-serif",
             boxSizing: "border-box",
-            transition: "border 0.2s",
+            transition: "border 0.2s, background 0.2s",
           }}
-          onFocus={e => e.target.style.border = "1px solid #1a3ed4"}
-          onBlur={e => e.target.style.border = "1px solid #e2e8f0"}
+          onFocus={e => { e.target.style.border = "1px solid #1a3ed4"; e.target.style.background = "#f0f4ff"; }}
+          onBlur={e => { e.target.style.border = search ? "1px solid #1a3ed4" : "1px solid #e2e8f0"; e.target.style.background = search ? "#f0f4ff" : "#f8fafc"; }}
         />
+        {search && (
+          <button
+            onClick={() => onSearch && onSearch("")}
+            style={{
+              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+              background: "none", border: "none", cursor: "pointer", color: "#94a3b8",
+              display: "flex", alignItems: "center", padding: 0,
+            }}
+          >
+            <i className="ti ti-x" style={{ fontSize: 14 }} />
+          </button>
+        )}
       </div>
 
       {/* École + Trimestre */}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CLASSES, STUDENTS, getNomComplet, getInitials } from "./studentsData";
+import { useToast } from "../context/ToastContext";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
@@ -616,12 +617,14 @@ const downloadBulletin = () => {
 
 /* ─── LISTE PRINCIPALE ───────────────────────────────────────── */
 export default function Eleves() {
+  const { showToast } = useToast();
   const [search,   setSearch]   = useState("");
   const [filtre,   setFiltre]   = useState("Tous");
   const [selected, setSelected] = useState(null);
   const [modal,    setModal]    = useState(false);
   const [eleves,   setEleves]   = useState(DATA);
-  const [form, setForm] = useState({
+  const [errors,   setErrors]   = useState({});
+  const [form,     setForm]     = useState({
     prenom:"",nom:"",sexe:"M",dateNaissance:"",
     classe:"",numero:"",email:"",
     tuteur:"",numeroTuteur:"",adresse:"",
@@ -634,8 +637,23 @@ export default function Eleves() {
     return m&&c;
   });
 
+  const validate = () => {
+    const errs = {};
+    if (!form.prenom || !form.prenom.trim()) errs.prenom = "Le prénom est requis";
+    if (!form.nom || !form.nom.trim()) errs.nom = "Le nom est requis";
+    if (!form.classe || !form.classe.trim()) errs.classe = "La classe est requise";
+    if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = "Format email invalide";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const add = () => {
-    if(!form.prenom||!form.nom) return;
+    if (!validate()) {
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
     setEleves([...eleves,{
       ...form,
       id:eleves.length+1,
@@ -646,7 +664,9 @@ export default function Eleves() {
       paiements:{total:0,paye:0,historique:[]},
     }]);
     setForm({prenom:"",nom:"",sexe:"M",dateNaissance:"",classe:"",numero:"",email:"",tuteur:"",numeroTuteur:"",adresse:""});
+    setErrors({});
     setModal(false);
+    showToast(`${form.prenom} ${form.nom} ajouté(e) avec succès`, "success");
   };
 
   if(selected) return <Profil eleve={selected} onRetour={()=>setSelected(null)} />;
@@ -809,10 +829,10 @@ export default function Eleves() {
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {[
-                {label:"Prénom",         key:"prenom",       ph:"Aminata"},
-                {label:"Nom",            key:"nom",          ph:"Diallo"},
+                {label:"Prénom *",         key:"prenom",       ph:"Aminata"},
+                {label:"Nom *",            key:"nom",          ph:"Diallo"},
                 {label:"Date naissance", key:"dateNaissance",ph:"12/03/2006"},
-                {label:"Classe",         key:"classe",       ph:"Terminale A"},
+                {label:"Classe *",         key:"classe",       ph:"Terminale A"},
                 {label:"Téléphone",      key:"numero",       ph:"621 00 11 22"},
                 {label:"Email",          key:"email",        ph:"aminata@email.com"},
                 {label:"Tuteur",         key:"tuteur",       ph:"Mamadou Diallo"},
@@ -820,11 +840,12 @@ export default function Eleves() {
               ].map(f=>(
                 <div key={f.key}>
                   <label style={{fontSize:11,fontWeight:600,color:t.sub,display:"block",marginBottom:5}}>{f.label}</label>
-                  <input type="text" placeholder={f.ph} value={form[f.key]} onChange={e=>setForm({...form,[f.key]:e.target.value})}
-                    style={{width:"100%",padding:"9px 12px",border:`1px solid ${t.border}`,borderRadius:8,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:t.font,color:t.text}}
-                    onFocus={e=>e.currentTarget.style.borderColor=t.blue}
-                    onBlur={e=>e.currentTarget.style.borderColor=t.border}
+                  <input type="text" placeholder={f.ph} value={form[f.key]} onChange={e=>{setForm({...form,[f.key]:e.target.value});setErrors(ev=>({...ev,[f.key]:undefined}));}}
+                    style={{width:"100%",padding:"9px 12px",border:`1px solid ${errors[f.key]?"#dc2626":t.border}`,borderRadius:8,fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:t.font,color:t.text}}
+                    onFocus={e=>e.currentTarget.style.borderColor=errors[f.key]?"#dc2626":t.blue}
+                    onBlur={e=>e.currentTarget.style.borderColor=errors[f.key]?"#dc2626":t.border}
                   />
+                  {errors[f.key] && <p style={{ color:"#dc2626", fontSize:11, marginTop:3 }}>{errors[f.key]}</p>}
                 </div>
               ))}
             </div>

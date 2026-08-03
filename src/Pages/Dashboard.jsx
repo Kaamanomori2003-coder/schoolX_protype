@@ -205,7 +205,7 @@ function DonutChart() {
 }
 
 /* ── DASHBOARD ─────────────────────────────────────────────────── */
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
   const [hovered, setHovered] = useState(null);
 
   return (
@@ -225,7 +225,9 @@ export default function Dashboard() {
             Voici ce qui se passe dans votre établissement aujourd'hui.
           </p>
         </div>
-        <button style={{
+        <button
+          onClick={() => onNavigate && onNavigate("Gestion des élèves")}
+          style={{
           display: "flex", alignItems: "center", gap: 8,
           background: "linear-gradient(135deg,#1d4ed8,#6366f1)",
           color: "#fff", border: "none", borderRadius: 11,

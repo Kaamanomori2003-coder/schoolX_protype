@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 
 const t = {
   bg:"#f7f8fa", surface:"#ffffff", border:"#eaecf0",
@@ -38,31 +39,28 @@ const DATA = [
 
 const emptyForm = { nom:"", professeur:"", heures:"", classe:"", coefficient:"" };
 
-const Field = ({ label, placeholder, value, onChange }) => (
+const Field = ({ label, placeholder, value, onChange, error }) => (
   <div>
     <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:5 }}>{label}</label>
     <input type="text" placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
-      style={{ width:"100%", padding:"9px 12px", border:`1px solid ${t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
-      onFocus={e => e.currentTarget.style.borderColor=t.blue}
-      onBlur={e  => e.currentTarget.style.borderColor=t.border}
+      style={{ width:"100%", padding:"9px 12px", border:`1px solid ${error?"#dc2626":t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
+      onFocus={e => e.currentTarget.style.borderColor = error ? "#dc2626" : t.blue}
+      onBlur={e => e.currentTarget.style.borderColor = error ? "#dc2626" : t.border}
     />
+    {error && <p style={{ color:"#dc2626", fontSize:11, marginTop:3 }}>{error}</p>}
   </div>
 );
 
 export function Matieres() {
-  const [search,    setSearch]    = useState("");
-  const [viewMode,  setViewMode]  = useState("table");
-  const [matieres,  setMatieres]  = useState(DATA);
-  const [modal,     setModal]     = useState(false);
-  const [editId,    setEditId]    = useState(null);
-  const [delId,     setDelId]     = useState(null);
-  const [form,      setForm]      = useState(emptyForm);
-  const [toast,     setToast]     = useState(null);
-
-  const showToast = (msg, type="success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
+  const { showToast } = useToast();
+  const [matieres, setMatieres] = useState(DATA);
+  const [search,   setSearch]   = useState("");
+  const [viewMode, setViewMode] = useState("table");
+  const [form,     setForm]     = useState(emptyForm);
+  const [editId,   setEditId]   = useState(null);
+  const [modal,    setModal]    = useState(false);
+  const [delId,    setDelId]    = useState(null);
+  const [errors,   setErrors]   = useState({});
 
   const filtered = matieres.filter(m =>
     m.nom.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,16 +68,33 @@ export function Matieres() {
     m.classe.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openAdd = () => { setForm(emptyForm); setEditId(null); setModal(true); };
+  const openAdd = () => { setForm(emptyForm); setEditId(null); setErrors({}); setModal(true); };
 
   const openEdit = (m) => {
     setForm({ nom:m.nom, professeur:m.professeur, heures:String(m.heures), classe:m.classe, coefficient:String(m.coefficient) });
     setEditId(m.id);
+    setErrors({});
     setModal(true);
   };
 
+  const validate = () => {
+    const errs = {};
+    if (!form.nom || !form.nom.trim()) errs.nom = "Le nom de la matière est requis";
+    if (!form.professeur || !form.professeur.trim()) errs.professeur = "Le nom du professeur est requis";
+    if (!form.classe || !form.classe.trim()) errs.classe = "La classe est requise";
+    const h = parseInt(form.heures);
+    if (!form.heures || isNaN(h) || h <= 0) errs.heures = "Les heures doivent être > 0";
+    const c = parseInt(form.coefficient);
+    if (!form.coefficient || isNaN(c) || c <= 0) errs.coefficient = "Le coefficient doit être > 0";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const save = () => {
-    if (!form.nom || !form.professeur) return;
+    if (!validate()) {
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
     if (editId) {
       setMatieres(prev => prev.map(m => m.id === editId ? { ...m, ...form, heures:parseInt(form.heures)||0, coefficient:parseInt(form.coefficient)||1 } : m));
       showToast("Matière modifiée");
@@ -87,6 +102,7 @@ export function Matieres() {
       setMatieres(prev => [...prev, { id:Date.now(), ...form, heures:parseInt(form.heures)||0, coefficient:parseInt(form.coefficient)||1 }]);
       showToast("Matière ajoutée");
     }
+    setErrors({});
     setModal(false);
   };
 
@@ -103,14 +119,6 @@ export function Matieres() {
 
   return (
     <div style={{ fontFamily:t.font, color:t.text }}>
-
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position:"fixed", bottom:24, right:24, zIndex:999, background:toast.type==="error"?t.red:t.green, color:"#fff", padding:"11px 18px", borderRadius:10, fontSize:13, fontWeight:600, boxShadow:"0 4px 16px rgba(0,0,0,0.15)", display:"flex", alignItems:"center", gap:8 }}>
-          <i className={`ti ${toast.type==="error"?"ti-x":"ti-check"}`} style={{ fontSize:15 }} />
-          {toast.msg}
-        </div>
-      )}
 
       {/* HEADER */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22, flexWrap:"wrap", gap:12 }}>
@@ -302,12 +310,12 @@ export function Matieres() {
               </button>
             </div>
             <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
-              <Field label="Nom de la matière" placeholder="Ex : Mathématiques"      value={form.nom}         onChange={v=>setForm({...form,nom:v})} />
-              <Field label="Professeur"         placeholder="Ex : Dr. Mamadou Diallo" value={form.professeur}  onChange={v=>setForm({...form,professeur:v})} />
-              <Field label="Classe"             placeholder="Ex : Terminale A"        value={form.classe}      onChange={v=>setForm({...form,classe:v})} />
+              <Field label="Nom de la matière *" placeholder="Ex : Mathématiques"      value={form.nom}         onChange={v=>{setForm({...form,nom:v});setErrors(ev=>({...ev,nom:undefined}));}} error={errors.nom} />
+              <Field label="Professeur *"         placeholder="Ex : Dr. Mamadou Diallo" value={form.professeur}  onChange={v=>{setForm({...form,professeur:v});setErrors(ev=>({...ev,professeur:undefined}));}} error={errors.professeur} />
+              <Field label="Classe *"             placeholder="Ex : Terminale A"        value={form.classe}      onChange={v=>{setForm({...form,classe:v});setErrors(ev=>({...ev,classe:undefined}));}} error={errors.classe} />
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-                <Field label="Heures / semaine" placeholder="Ex : 4" value={form.heures}      onChange={v=>setForm({...form,heures:v})} />
-                <Field label="Coefficient"      placeholder="Ex : 3"  value={form.coefficient} onChange={v=>setForm({...form,coefficient:v})} />
+                <Field label="Heures / semaine *" placeholder="Ex : 4" value={form.heures}      onChange={v=>{setForm({...form,heures:v});setErrors(ev=>({...ev,heures:undefined}));}} error={errors.heures} />
+                <Field label="Coefficient *"      placeholder="Ex : 3"  value={form.coefficient} onChange={v=>{setForm({...form,coefficient:v});setErrors(ev=>({...ev,coefficient:undefined}));}} error={errors.coefficient} />
               </div>
             </div>
             <div style={{ display:"flex",gap:10,marginTop:22 }}>

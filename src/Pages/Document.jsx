@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useToast } from "../context/ToastContext";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
@@ -358,10 +359,8 @@ export default function Documents() {
   const [vue,        setVue]        = useState("grid");
   const [selected,   setSelected]   = useState(null);
   const [showUpload, setShowUpload] = useState(false);
-  const [toast,      setToast]      = useState(null);
   const [hovered,    setHovered]    = useState(null);
-
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
+  const { showToast } = useToast();
 
   const handleUpload = (doc) => {
     setDocs(prev=>[{ id:Date.now(), ...doc }, ...prev]);
@@ -405,14 +404,6 @@ export default function Documents() {
 
   return (
     <div style={{ fontFamily:t.font, color:t.text }}>
-
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position:"fixed", bottom:24, right:24, zIndex:999, background:toast.type==="error"?t.red:t.green, color:"#fff", padding:"11px 18px", borderRadius:10, fontSize:13, fontWeight:600, boxShadow:"0 4px 16px rgba(0,0,0,0.15)", display:"flex", alignItems:"center", gap:8 }}>
-          <i className={`ti ${toast.type==="error"?"ti-trash":"ti-check"}`} style={{ fontSize:15 }} />
-          {toast.msg}
-        </div>
-      )}
 
       {/* ── HEADER ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24, flexWrap:"wrap", gap:12 }}>

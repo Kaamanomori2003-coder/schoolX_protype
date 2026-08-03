@@ -3,6 +3,7 @@ import { useNotifications } from "../context/NotificationsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import "./Notes.css";
 import ConfirmModal from "../components/ConfirmModal";
+import { useToast } from "../context/ToastContext";
 
 // Rich Mockup Personnel Dataset
 const initialEmployes = [
@@ -377,12 +378,22 @@ export default function RH() {
     return matchesSearch && matchesCategorie && matchesStatut && matchesAnciennete;
   });
 
+  const { showToast } = useToast();
+  const [rhErrors, setRhErrors] = useState({});
   // Handle Add / Edit Employee
   const handleAddEmployee = () => {
-    if (!newStaffForm.nom || !newStaffForm.poste) {
-      alert("Veuillez renseigner au minimum le nom et le poste de l'employé.");
+    const errs = {};
+    if (!newStaffForm.nom.trim()) errs.nom = "Le nom est requis";
+    if (!newStaffForm.poste.trim()) errs.poste = "Le poste est requis";
+    const sal = parseInt(newStaffForm.salaire);
+    if (!newStaffForm.salaire || isNaN(sal) || sal <= 0) errs.salaire = "Le salaire doit être supérieur à 0";
+    if (newStaffForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newStaffForm.email)) errs.email = "Format email invalide";
+    if (Object.keys(errs).length > 0) {
+      setRhErrors(errs);
+      showToast("Veuillez corriger les champs en rouge", "error");
       return;
     }
+    setRhErrors({});
     const scheduleArray = typeof newStaffForm.emploiDuTemps === 'string'
       ? newStaffForm.emploiDuTemps.split(";").map(s => s.trim())
       : newStaffForm.emploiDuTemps;
@@ -393,6 +404,7 @@ export default function RH() {
         nom: "", poste: "", salaire: "", contrat: "CDI", diplome: "", telephone: "", email: "", emploiDuTemps: "", avatar: "ti-school", categorie: "Enseignant"
       });
       setShowAddStaffModal(false);
+      showToast("Collaborateur mis à jour", "success");
       return;
     }
 
@@ -424,6 +436,7 @@ export default function RH() {
       nom: "", poste: "", salaire: "", contrat: "CDI", diplome: "", telephone: "", email: "", emploiDuTemps: "", avatar: "ti-school", categorie: "Enseignant"
     });
     setShowAddStaffModal(false);
+    showToast(`${newEmp.nom} ajouté à l'équipe`, "success");
 
     // Add alert notification
     setAlerts([
@@ -434,11 +447,20 @@ export default function RH() {
 
   const handleDeleteEmployee = (empId) => {
     setEmployes(employes.filter(e => e.id !== empId));
+    showToast("Employé supprimé de l'équipe", "error");
   };
 
   // Handle Add Candidate
   const handleAddCandidate = () => {
-    if (!newCandidateForm.nom || !newCandidateForm.poste) return;
+    const errs = {};
+    if (!newCandidateForm.nom.trim()) errs.candNom = "Le nom du candidat est requis";
+    if (!newCandidateForm.poste.trim()) errs.candPoste = "Le poste ciblé est requis";
+    if (Object.keys(errs).length > 0) {
+      setRhErrors(errs);
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
+    setRhErrors({});
     const newCand = {
       id: Date.now(),
       nom: newCandidateForm.nom,
@@ -454,17 +476,34 @@ export default function RH() {
     setCandidates([...candidates, newCand]);
     setNewCandidateForm({ nom: "", poste: "", diplome: "", email: "", tel: "", categorie: "Enseignant" });
     setShowAddCandidateModal(false);
+    showToast(`Candidature de ${newCand.nom} enregistrée`, "success");
   };
 
   // Handle Move Candidate Etape
   const handleMoveCandidate = (candId, nextEtape) => {
     setCandidates(candidates.map(c => c.id === candId ? { ...c, etape: nextEtape } : c));
+    const cand = candidates.find(c => c.id === candId);
+    if (cand) {
+      showToast(`Candidat ${cand.nom} déplacé vers : ${nextEtape}`, "info");
+    }
   };
 
   // Handle Leave Submission
   const handleAddLeave = () => {
+    const errs = {};
+    if (!newLeaveForm.employeId) errs.leaveEmp = "Veuillez sélectionner un employé";
+    if (!newLeaveForm.debut) errs.leaveDebut = "La date de début est requise";
+    if (!newLeaveForm.fin) errs.leaveFin = "La date de fin est requise";
+    if (newLeaveForm.debut && newLeaveForm.fin && newLeaveForm.fin < newLeaveForm.debut) errs.leaveFin = "La date de fin doit être après la date de début";
+    const j = parseInt(newLeaveForm.jours);
+    if (!newLeaveForm.jours || isNaN(j) || j <= 0) errs.leaveJours = "Le nombre de jours doit être supérieur à 0";
+    if (Object.keys(errs).length > 0) {
+      setRhErrors(errs);
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
+    setRhErrors({});
     const selectedEmp = employes.find(e => e.id === parseInt(newLeaveForm.employeId));
-    if (!selectedEmp || !newLeaveForm.debut || !newLeaveForm.fin || !newLeaveForm.jours) return;
 
     const newReq = {
       id: Date.now(),
@@ -480,10 +519,16 @@ export default function RH() {
     setLeaveRequests([...leaveRequests, newReq]);
     setShowAddLeaveModal(false);
     setNewLeaveForm({ employeId: "", type: "Congé Annuel", debut: "", fin: "", jours: "" });
+    showToast(`Demande de congé pour ${selectedEmp.nom} soumise`, "success");
   };
 
   // Approve/Refuse Leave Requests
   const handleLeaveDecision = (reqId, isApproved) => {
+
+    showToast(
+      isApproved ? "Congé approuvé" : "Congé refusé",
+      isApproved ? "success" : "warning"
+    );
     setLeaveRequests(leaveRequests.map(r => {
       if (r.id === reqId) {
         const newStatus = isApproved ? "Approuvé" : "Refusé";
@@ -509,6 +554,8 @@ export default function RH() {
 
   // Toggle Payroll Payment
   const handlePaySalary = (empId) => {
+    showToast("Salaire marqué comme payé", "success");
+
     setEmployes(prev => prev.map(e => {
       if (e.id === empId) {
         return {
@@ -1496,12 +1543,13 @@ export default function RH() {
                 <div style={{ display: "grid", gap: 14 }}>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Employé concerné *</label>
-                    <select value={newLeaveForm.employeId} onChange={e => setNewLeaveForm({ ...newLeaveForm, employeId: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
+                    <select value={newLeaveForm.employeId} onChange={e => { setNewLeaveForm({ ...newLeaveForm, employeId: e.target.value }); setRhErrors(ev=>({...ev, leaveEmp: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.leaveEmp ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="">Sélectionnez un collaborateur</option>
                       {employes.map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.nom} — {emp.poste}</option>
                       ))}
                     </select>
+                    {rhErrors.leaveEmp && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveEmp}</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Type de congé</label>
@@ -1514,17 +1562,20 @@ export default function RH() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
-                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Début</label>
-                      <input type="date" value={newLeaveForm.debut} onChange={e => setNewLeaveForm({ ...newLeaveForm, debut: e.target.value })} style={{ width: "100%", padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Début *</label>
+                      <input type="date" value={newLeaveForm.debut} onChange={e => { setNewLeaveForm({ ...newLeaveForm, debut: e.target.value }); setRhErrors(ev=>({...ev, leaveDebut: undefined})); }} style={{ width: "100%", padding: "9px", border: `1px solid ${rhErrors.leaveDebut ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.leaveDebut && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveDebut}</p>}
                     </div>
                     <div>
-                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Fin</label>
-                      <input type="date" value={newLeaveForm.fin} onChange={e => setNewLeaveForm({ ...newLeaveForm, fin: e.target.value })} style={{ width: "100%", padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Fin *</label>
+                      <input type="date" value={newLeaveForm.fin} onChange={e => { setNewLeaveForm({ ...newLeaveForm, fin: e.target.value }); setRhErrors(ev=>({...ev, leaveFin: undefined})); }} style={{ width: "100%", padding: "9px", border: `1px solid ${rhErrors.leaveFin ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.leaveFin && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveFin}</p>}
                     </div>
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nombre de jours ouvrés *</label>
-                    <input type="number" placeholder="Ex: 5" value={newLeaveForm.jours} onChange={e => setNewLeaveForm({ ...newLeaveForm, jours: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    <input type="number" placeholder="Ex: 5" value={newLeaveForm.jours} onChange={e => { setNewLeaveForm({ ...newLeaveForm, jours: e.target.value }); setRhErrors(ev=>({...ev, leaveJours: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.leaveJours ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.leaveJours && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveJours}</p>}
                   </div>
                 </div>
 
@@ -1564,11 +1615,13 @@ export default function RH() {
                 <div style={{ display: "grid", gap: 14 }}>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet *</label>
-                    <input type="text" placeholder="Ex: Jean Martin" value={newStaffForm.nom} onChange={e => setNewStaffForm({ ...newStaffForm, nom: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    <input type="text" placeholder="Ex: Jean Martin" value={newStaffForm.nom} onChange={e => { setNewStaffForm({ ...newStaffForm, nom: e.target.value }); setRhErrors(ev=>({...ev, nom: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.nom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.nom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.nom}</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Poste / Discipline d'enseignement *</label>
-                    <input type="text" placeholder="Ex: Professeur de Mathématiques ou Cuisinier" value={newStaffForm.poste} onChange={e => setNewStaffForm({ ...newStaffForm, poste: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    <input type="text" placeholder="Ex: Professeur de Mathématiques ou Cuisinier" value={newStaffForm.poste} onChange={e => { setNewStaffForm({ ...newStaffForm, poste: e.target.value }); setRhErrors(ev=>({...ev, poste: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.poste ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.poste && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.poste}</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Catégorie de rôle *</label>
@@ -1589,7 +1642,8 @@ export default function RH() {
                     </div>
                     <div>
                       <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Salaire mensuel (GNF) *</label>
-                      <input type="number" placeholder="Ex: 2000000" value={newStaffForm.salaire} onChange={e => setNewStaffForm({ ...newStaffForm, salaire: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      <input type="number" placeholder="Ex: 2000000" value={newStaffForm.salaire} onChange={e => { setNewStaffForm({ ...newStaffForm, salaire: e.target.value }); setRhErrors(ev=>({...ev, salaire: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.salaire ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.salaire && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.salaire}</p>}
                     </div>
                   </div>
                   <div>
@@ -1603,7 +1657,8 @@ export default function RH() {
                     </div>
                     <div>
                       <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>E-mail</label>
-                      <input type="email" placeholder="Ex: j.martin@schoolx.gn" value={newStaffForm.email} onChange={e => setNewStaffForm({ ...newStaffForm, email: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      <input type="email" placeholder="Ex: j.martin@schoolx.gn" value={newStaffForm.email} onChange={e => { setNewStaffForm({ ...newStaffForm, email: e.target.value }); setRhErrors(ev=>({...ev, email: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.email ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.email && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.email}</p>}
                     </div>
                   </div>
                   <div>
@@ -1623,13 +1678,12 @@ export default function RH() {
                   </div>
                 </div>
 
-               
-                <button onClick={() => {
-                  setNewStaffForm({ nom: "", poste: "", salaire: "", contrat: "CDI", diplome: "", telephone: "", email: "", emploiDuTemps: "", avatar: "ti-school", categorie: "Enseignant" });
-                  setShowAddStaffModal(true);
-                }} style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e3a8a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", transition: "0.2s", boxShadow: "0 4px 12px rgba(30,58,138,0.2)" }}>
-                  <i className="ti ti-user-plus" /> Ajouter un Employé
-                </button>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setShowAddStaffModal(false)} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+                  <button onClick={handleAddEmployee} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#1e3a8a", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                    {newStaffForm.id ? "Mettre à jour" : "Enregistrer"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -1660,11 +1714,13 @@ export default function RH() {
                 <div style={{ display: "grid", gap: 14 }}>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet du Candidat *</label>
-                    <input type="text" placeholder="Ex: Marc Dubois" value={newCandidateForm.nom} onChange={e => setNewCandidateForm({ ...newCandidateForm, nom: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    <input type="text" placeholder="Ex: Marc Dubois" value={newCandidateForm.nom} onChange={e => { setNewCandidateForm({ ...newCandidateForm, nom: e.target.value }); setRhErrors(ev=>({...ev, candNom: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.candNom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.candNom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.candNom}</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Poste ciblé *</label>
-                    <input type="text" placeholder="Ex: Professeur de Chimie ou Cuisinier" value={newCandidateForm.poste} onChange={e => setNewCandidateForm({ ...newCandidateForm, poste: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    <input type="text" placeholder="Ex: Professeur de Chimie ou Cuisinier" value={newCandidateForm.poste} onChange={e => { setNewCandidateForm({ ...newCandidateForm, poste: e.target.value }); setRhErrors(ev=>({...ev, candPoste: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.candPoste ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.candPoste && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.candPoste}</p>}
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Catégorie de rôle *</label>
