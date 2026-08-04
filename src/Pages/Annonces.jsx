@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
   bg:"#f7f8fa", surface:"#ffffff", border:"#eaecf0",
   blue:"#2563eb", blueSoft:"#eff6ff", blueMid:"#dbeafe",
-  text:"#111827", sub:"#6b7280", muted:"#9ca3af",
+  text:"#111827", sub:"#6b7280", muted:"#9ca3af", 
   green:"#059669", greenSoft:"#f0fdf4",
   amber:"#d97706", amberSoft:"#fffbeb",
   red:"#dc2626", redSoft:"#fef2f2",
@@ -286,6 +287,7 @@ function AnnonceDrawer({ annonce, onClose, onEdit, onArchive }) {
 
 /* ─── MODAL CRÉATION ─────────────────────────────────────────── */
 function AnnonceModal({ initial, onClose, onSave }) {
+  const { showToast } = useToast();
   const [form, setForm] = useState(initial ? {
     titre:   initial.titre,
     contenu: initial.contenu,
@@ -304,10 +306,34 @@ function AnnonceModal({ initial, onClose, onSave }) {
   const toggleArr = (arr, val) =>
     arr.includes(val) ? arr.filter(x=>x!==val) : [...arr, val];
 
-  const valid = form.titre.trim() && form.contenu.trim();
+  const [annErrors, setAnnErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!form.titre.trim()) {
+      errs.titre = "Le titre est requis";
+    } else if (form.titre.trim().length < 5) {
+      errs.titre = "Le titre doit contenir au moins 5 caractères";
+    }
+
+    if (!form.contenu.trim()) {
+      errs.contenu = "Le contenu est requis";
+    } else if (form.contenu.trim().length < 10) {
+      errs.contenu = "Le contenu doit contenir au moins 10 caractères";
+    }
+
+    setAnnErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSave = (brouillon=false) => {
-    if (!valid && !brouillon) return;
+    if (!brouillon) {
+      if (!validate()) {
+        showToast("Veuillez corriger les champs en rouge", "error");
+        return;
+      }
+    }
+    setAnnErrors({});
     onSave({ ...form, statut: brouillon?"Brouillon": form.publierMaintenant?"Publié":"Programmé" });
     onClose();
   };
@@ -330,21 +356,23 @@ function AnnonceModal({ initial, onClose, onSave }) {
         {/* Titre */}
         <div style={{ marginBottom:14 }}>
           <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:5 }}>Titre *</label>
-          <input type="text" placeholder="Ex : Réunion parents-professeurs — Trimestre 1" value={form.titre} onChange={e=>setForm({...form,titre:e.target.value})}
-            style={{ width:"100%", padding:"10px 12px", border:`1px solid ${t.border}`, borderRadius:8, fontSize:14, fontWeight:500, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
-            onFocus={e=>e.currentTarget.style.borderColor=t.blue}
-            onBlur={e=>e.currentTarget.style.borderColor=t.border}
+          <input type="text" placeholder="Ex : Réunion parents-professeurs — Trimestre 1" value={form.titre} onChange={e=>{setForm({...form,titre:e.target.value});setAnnErrors(ev=>({...ev,titre:undefined}));}}
+            style={{ width:"100%", padding:"10px 12px", border:`1px solid ${annErrors.titre?"#dc2626":t.border}`, borderRadius:8, fontSize:14, fontWeight:500, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
+            onFocus={e=>e.currentTarget.style.borderColor=annErrors.titre?"#dc2626":t.blue}
+            onBlur={e=>e.currentTarget.style.borderColor=annErrors.titre?"#dc2626":t.border}
           />
+          {annErrors.titre && <p style={{ color:"#dc2626", fontSize:12, marginTop:4 }}>{annErrors.titre}</p>}
         </div>
 
         {/* Contenu */}
         <div style={{ marginBottom:14 }}>
           <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:5 }}>Contenu *</label>
-          <textarea placeholder="Rédigez le contenu de votre annonce ici…" value={form.contenu} onChange={e=>setForm({...form,contenu:e.target.value})} rows={5}
-            style={{ width:"100%", padding:"10px 12px", border:`1px solid ${t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text, resize:"vertical", lineHeight:1.6 }}
-            onFocus={e=>e.currentTarget.style.borderColor=t.blue}
-            onBlur={e=>e.currentTarget.style.borderColor=t.border}
+          <textarea placeholder="Rédigez le contenu de votre annonce ici…" value={form.contenu} onChange={e=>{setForm({...form,contenu:e.target.value});setAnnErrors(ev=>({...ev,contenu:undefined}));}} rows={5}
+            style={{ width:"100%", padding:"10px 12px", border:`1px solid ${annErrors.contenu?"#dc2626":t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text, resize:"vertical", lineHeight:1.6 }}
+            onFocus={e=>e.currentTarget.style.borderColor=annErrors.contenu?"#dc2626":t.blue}
+            onBlur={e=>e.currentTarget.style.borderColor=annErrors.contenu?"#dc2626":t.border}
           />
+          {annErrors.contenu && <p style={{ color:"#dc2626", fontSize:12, marginTop:4 }}>{annErrors.contenu}</p>}
         </div>
 
         {/* Type */}
@@ -449,7 +477,7 @@ function AnnonceModal({ initial, onClose, onSave }) {
           <button onClick={()=>handleSave(true)} style={{ padding:"10px 16px", border:`1px solid ${t.border}`, borderRadius:9, background:t.surface, fontSize:13, fontWeight:600, cursor:"pointer", color:t.sub, fontFamily:t.font }}>
             <i className="ti ti-device-floppy" style={{ fontSize:13, marginRight:5 }} />Brouillon
           </button>
-          <button onClick={()=>handleSave(false)} disabled={!valid} style={{ flex:1, padding:"10px", border:"none", borderRadius:9, background:valid?t.blue:"#93c5fd", color:"#fff", fontSize:13, fontWeight:600, cursor:valid?"pointer":"default", fontFamily:t.font, display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
+          <button onClick={()=>handleSave(false)} style={{ flex:1, padding:"10px", border:"none", borderRadius:9, background:t.blue, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:t.font, display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
             <i className="ti ti-send" style={{ fontSize:14 }} />
             {form.publierMaintenant?"Publier maintenant":"Programmer"}
           </button>
@@ -472,9 +500,7 @@ export default function Annonces() {
   const [modal,       setModal]       = useState(false);
   const [editAnn,     setEditAnn]     = useState(null);
   const [hovered,     setHovered]     = useState(null);
-  const [toast,       setToast]       = useState(null);
-
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
+  const { showToast } = useToast();
 
   const handleSave = (form) => {
     if (editAnn) {
@@ -541,14 +567,6 @@ export default function Annonces() {
 
   return (
     <div style={{ fontFamily:t.font, color:t.text }}>
-
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position:"fixed", bottom:24, right:24, zIndex:999, background:toast.type==="error"?t.red:t.green, color:"#fff", padding:"11px 18px", borderRadius:10, fontSize:13, fontWeight:600, boxShadow:"0 4px 16px rgba(0,0,0,0.15)", display:"flex", alignItems:"center", gap:8 }}>
-          <i className={`ti ${toast.type==="error"?"ti-trash":"ti-check"}`} style={{ fontSize:15 }} />
-          {toast.msg}
-        </div>
-      )}
 
       {/* ── HEADER ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:24, flexWrap:"wrap", gap:12 }}>

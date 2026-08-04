@@ -2,14 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./Notes.css";
-import { MATIERES, MAT_ABR, MAT_CLR, COEFFS as INITIAL_COEFFS, CLASSES, ELEVES, INITIAL_NOTES, avatarColor, getInitials, noteColor, statutInfo, EVO } from "./notesData";
+import { MATIERES, MAT_ABR, MAT_CLR, COEFFS as INITIAL_COEFFS, INITIAL_NOTES, avatarColor, noteColor, statutInfo, EVO } from "./notesData";
+import { CLASSES, STUDENTS, getNomComplet, getInitials } from "./studentsData";
 import ConfirmModal from "../components/ConfirmModal";
-import { 
-  Target, 
-  CheckCircle, 
-  AlertTriangle, 
-  Eye, 
-  AlertCircle 
+import { useToast } from "../context/ToastContext";
+import {
+  Target,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
+  AlertCircle
 } from "lucide-react";
 
 
@@ -50,10 +52,10 @@ function ContextMenu({ eleve, onClose, onView, onEdit, onEditInfo, onPrint }) {
 /* ─────────────────────────────────────────────
    MODAL COEFFICIENTS
 ───────────────────────────────────────────── */
-function CoeffModal({ coeffs, setCoeffs, onClose }) {
+function CoeffModal({ coeffs, setCoeffs, onClose, showToast }) {
   const [localCoeffs, setLocalCoeffs] = useState({ ...coeffs });
 
-  const handleSave = () => { setCoeffs(localCoeffs); onClose(); };
+  const handleSave = () => { setCoeffs(localCoeffs); onClose(); showToast("Coefficients mis à jour", "success", "Les moyennes ont été recalculées automatiquement."); };
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
@@ -112,7 +114,7 @@ function CoeffModal({ coeffs, setCoeffs, onClose }) {
 /* ─────────────────────────────────────────────
    MODAL SAISIE DES NOTES
 ───────────────────────────────────────────── */
-function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose }) {
+function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose, showToast}) {
   const [localNotes, setLocalNotes] = useState({ ...notesData[eleve.id][trimestre] });
 
   const getMoy = (notes) => {
@@ -128,6 +130,7 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
   const handleSave = () => {
     setNotesData(prev => ({ ...prev, [eleve.id]: { ...prev[eleve.id], [trimestre]: localNotes } }));
     onClose();
+    showToast("Notes enregistrées avec succès", "success");
   };
 
   const m = getMoy(localNotes);
@@ -142,11 +145,10 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
         <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: 20, color: "#fff" }}>
-              {getInitials(eleve.nom)}
+              {getInitials(eleve)}
             </div>
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{eleve.nom}</h2>
-              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Saisie des notes — {trimestre}</span>
+              <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{getNomComplet(eleve)}</h2>              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Saisie des notes — {trimestre}</span>
             </div>
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
@@ -197,18 +199,38 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose 
    MODAL AJOUTER / MODIFIER UN ÉLÈVE
 ───────────────────────────────────────────── */
 function StudentModal({ onClose, onSave, classes, trimestre, initialStudent }) {
+  const { showToast } = useToast();
   const isEdit = !!initialStudent;
-  const [name, setName] = useState(initialStudent ? initialStudent.nom : '');
+  const [prenom, setPrenom] = useState(initialStudent ? initialStudent.prenom : '');
+  const [nom, setNom] = useState(initialStudent ? initialStudent.nom : '');
   const [classe, setClasse] = useState(initialStudent ? initialStudent.classe : (classes[0] || ''));
   const [notes, setNotes] = useState(MATIERES.reduce((acc, mat) => { acc[mat] = ''; return acc; }, {}));
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!prenom.trim()) errs.prenom = "Le prénom est requis";
+    if (!nom.trim()) errs.nom = "Le nom est requis";
+    if (!classe) errs.classe = "La classe est requise";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = () => {
-    if (!name.trim() || !classe) return;
+    if (!validate()) {
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
     if (isEdit) {
-      onSave({ ...initialStudent, nom: name, classe });
+      onSave({ ...initialStudent, prenom, nom, classe });
     } else {
       const id = Date.now();
-      onSave({ id, nom: name, classe, notes });
+      onSave({
+        id, prenom, nom, classe, notes,
+        sexe: "M", matricule: `SCX-2024-${id}`, status: "Actif",
+        dateNaissance: "", numero: "", email: "", tuteur: "", numeroTuteur: "", adresse: "",
+        presences: { present: 0, absent: 0, retard: 0, total: 0 },
+      });
     }
     onClose();
   };
@@ -236,23 +258,18 @@ function StudentModal({ onClose, onSave, classes, trimestre, initialStudent }) {
         </div>
 
         <div style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
-          <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet *</label>
-              <input
-                type="text" placeholder="Ex: Jean Dupont" value={name}
-                onChange={e => setName(e.target.value)}
-                style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }}
-              />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Prénom *</label>
+              <input type="text" placeholder="Ex: Jean" value={prenom} onChange={e => { setPrenom(e.target.value); setErrors(ev => ({ ...ev, prenom: undefined })); }}
+                style={{ width: "100%", padding: "10px", border: `1px solid ${errors.prenom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }} />
+              {errors.prenom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{errors.prenom}</p>}
             </div>
             <div>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Classe *</label>
-              <select
-                value={classe} onChange={e => setClasse(e.target.value)}
-                style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }}
-              >
-                {classes.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom *</label>
+              <input type="text" placeholder="Ex: Dupont" value={nom} onChange={e => { setNom(e.target.value); setErrors(ev => ({ ...ev, nom: undefined })); }}
+                style={{ width: "100%", padding: "10px", border: `1px solid ${errors.nom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }} />
+              {errors.nom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{errors.nom}</p>}
             </div>
           </div>
 
@@ -314,15 +331,182 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
 
   const handlePrint = () => {
     const w = window.open("", "_blank");
-    w.document.write(`<html><head><title>Bulletin - ${eleve.nom}</title><style>body{font-family:sans-serif;padding:40px}h1{color:#1e293b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #e2e8f0;padding:10px;text-align:left}th{background:#f8fafc}tfoot td{font-weight:bold;background:#eff6ff}</style></head><body>`);
-    w.document.write(`<h1>Bulletin de notes - ${trimestre}</h1><p><strong>Élève :</strong> ${eleve.nom}</p><p><strong>Classe :</strong> ${eleve.classe}</p><p><strong>Statut :</strong> ${s.l}</p>`);
+    w.document.write(`<html><head><title>Bulletin - ${getNomComplet(eleve)}</title><style>body{font-family:sans-serif;padding:40px}h1{color:#1e293b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #e2e8f0;padding:10px;text-align:left}th{background:#f8fafc}tfoot td{font-weight:bold;background:#eff6ff}</style></head><body>`);
+    w.document.write(`<h1>Bulletin de notes - ${trimestre}</h1><p><strong>Élève :</strong> ${getNomComplet(eleve)}</p><p><strong>Classe :</strong> ${eleve.classe}</p><p><strong>Statut :</strong> ${s.l}</p>`);
     w.document.write(`<table><thead><tr><th>Matière</th><th>Coef.</th><th>Note /20</th></tr></thead><tbody>`);
     MATIERES.forEach(mat => { w.document.write(`<tr><td>${mat}</td><td>${coeffs[mat]}</td><td>${tNotes[mat]}</td>`); });
     w.document.write(`</tbody><tfoot><tr><td colspan="2">Moyenne générale</td><td>${m}/20</td>`);
     w.document.write(`</tfoot></table></body></html>`);
     w.document.close(); w.print();
   };
+  const noteLabel = (note) => {
+    if (note >= 16) return "Excellent";
+    if (note >= 14) return "Très Bien";
+    if (note >= 10) return "Bien";
+    return "À renforcer";
+  };
 
+  const loadJsPDF = () => new Promise((resolve) => {
+    if (window.jspdf) return resolve(window.jspdf.jsPDF);
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = () => resolve(window.jspdf.jsPDF);
+    document.head.appendChild(script);
+  });
+
+  const downloadBulletin = () => {
+    loadJsPDF().then((JsPDF) => {
+      const doc = new JsPDF({ unit: "mm", format: "a4" });
+      const pageWidth = 210;
+      const marginX = 15;
+      let y = 18;
+
+      // ── EN-TÊTE ÉCOLE ──
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("SchoolX", marginX, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Lycée Donka — Conakry, Guinée", marginX, y + 5);
+
+      doc.setFontSize(10);
+      doc.text(`Émis le ${new Date().toLocaleDateString("fr-FR")}`, pageWidth - marginX, y, { align: "right" });
+      y += 10;
+      doc.setDrawColor(200);
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 8;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`BULLETIN DE NOTES — ${trimestre}`, pageWidth / 2, y, { align: "center" });
+      y += 10;
+
+
+      // ── BANDEAU INFOS ÉLÈVE ──
+      doc.setDrawColor(220);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(marginX, y, pageWidth - marginX * 2, 36, 2, 2, "F");
+
+      const infoY = y + 7;
+      const col1 = marginX + 5;
+      const col2 = marginX + 95;
+      doc.setFontSize(9);
+
+      const infoLine = (label, value, x, yy) => {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(120);
+        doc.text(label, x, yy);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(20);
+        doc.text(String(value), x, yy + 4.5);
+      };
+
+      infoLine("Nom complet", getNomComplet(eleve), col1, infoY);
+      infoLine("Matricule", eleve.matricule, col2, infoY);
+      infoLine("Classe", eleve.classe, col1, infoY + 10);
+      infoLine("Sexe", eleve.sexe === "M" ? "Masculin" : "Féminin", col2, infoY + 10);
+      infoLine("Présences", `${eleve.presences.present}/${eleve.presences.total}`, col1, infoY + 20);
+      infoLine("Trimestre", trimestre, col2, infoY + 20);
+
+      y += 42;
+
+      // ── TABLEAU DES NOTES ──
+      const tableX = marginX;
+      const tableW = pageWidth - marginX * 2;
+      const colW = [70, 25, 25, tableW - 70 - 25 - 25];
+      const rowH = 8;
+
+      doc.setFillColor(0, 102, 204);
+      doc.rect(tableX, y, tableW, rowH, "F");
+      doc.setTextColor(255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      let x = tableX + 3;
+      ["Matière", "Note", "Coef.", "Appréciation"].forEach((h, i) => {
+        doc.text(h, x, y + 5.5);
+        x += colW[i];
+      });
+      y += rowH;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      MATIERES.forEach((mat, idx) => {
+        if (idx % 2 === 1) {
+          doc.setFillColor(250, 250, 251);
+          doc.rect(tableX, y, tableW, rowH, "F");
+        }
+        doc.setTextColor(20);
+        x = tableX + 3;
+        doc.text(mat, x, y + 5.5); x += colW[0];
+        doc.text(`${tNotes[mat]}/20`, x, y + 5.5); x += colW[1];
+        doc.text(`×${coeffs[mat]}`, x, y + 5.5); x += colW[2];
+        doc.text(noteLabel(tNotes[mat]), x, y + 5.5);
+        y += rowH;
+      });
+
+      // Moyenne pondérée
+      doc.setFillColor(239, 246, 255);
+      doc.rect(tableX, y, tableW, rowH, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 102, 204);
+      doc.text("Moyenne pondérée", tableX + 3, y + 5.5);
+      doc.text(`${m}/20`, tableX + colW[0] + 3, y + 5.5);
+      y += rowH;
+      doc.setDrawColor(220);
+      doc.rect(tableX, y - rowH * (MATIERES.length + 2), tableW, rowH * (MATIERES.length + 2));
+
+      y += 6;
+
+      // Point fort / à renforcer
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(22, 163, 74);
+      doc.text(`Point fort : ${mf} (${mx}/20)`, tableX, y);
+      doc.setTextColor(220, 38, 38);
+      doc.text(`À renforcer : ${mw} (${mn}/20)`, tableX + tableW / 2, y);
+      y += 6;
+
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Statut général : `, tableX, y);
+      doc.text(s.l, tableX + 32, y);
+      y += 10;
+
+      // ── BLOC SIGNATURES ──
+      const sigY = Math.min(y + 8, 215);
+      doc.setDrawColor(180);
+      doc.line(marginX, sigY, pageWidth - marginX, sigY);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text("Fait à Conakry, le " + new Date().toLocaleDateString("fr-FR"), marginX, sigY + 6);
+
+      const sigBoxW = 75;
+      const sigBoxY = sigY + 14;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(20);
+      doc.text("Le Directeur", marginX + sigBoxW / 2, sigBoxY, { align: "center" });
+      doc.text("Le Tuteur / Parent", pageWidth - marginX - sigBoxW / 2, sigBoxY, { align: "center" });
+
+      doc.setDrawColor(150);
+      doc.line(marginX, sigBoxY + 18, marginX + sigBoxW, sigBoxY + 18);
+      doc.line(pageWidth - marginX - sigBoxW, sigBoxY + 18, pageWidth - marginX, sigBoxY + 18);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(140);
+      doc.text("Signature et cachet", marginX + sigBoxW / 2, sigBoxY + 22, { align: "center" });
+      doc.text(eleve.tuteur || "Signature", pageWidth - marginX - sigBoxW / 2, sigBoxY + 22, { align: "center" });
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(180);
+      doc.text("Généré automatiquement par SchoolX — document à usage interne", pageWidth / 2, 290, { align: "center" });
+
+      doc.save(`Bulletin_${getNomComplet(eleve).replace(/\s+/g, "_")}_${trimestre}.pdf`);
+    });
+  };
   const thStyle = {
     padding: "14px",
     textAlign: "left",
@@ -356,10 +540,10 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, fontSize: 22, color: "#fff", flexShrink: 0
               }}>
-                {getInitials(eleve.nom)}
+                {getInitials(eleve)}
               </div>
               <div>
-                <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{eleve.nom}</h2>
+                <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{getNomComplet(eleve)}</h2>
                 <span style={{ color: "#e0f2fe", fontWeight: 600, fontSize: 14 }}>
                   {eleve.classe} &nbsp;•&nbsp; {trimestre} &nbsp;•&nbsp; {s.l}
                 </span>
@@ -372,7 +556,7 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
           <div style={{ display: "flex", gap: 10, marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 12 }}>
             {[
               { id: "resume", label: "Résumé" },
-              { id: "notes", label: "Notes détaillées" },
+              { id: "bulletin", label: "Bulletin" },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -418,10 +602,10 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
 
               {/* ── INDICATEUR D'EFFORT NÉCESSAIRE (Méthode C) ── */}
               <div style={{ marginTop: 20 }}>
-                <div style={{ 
-                  fontSize: 14, 
-                  fontWeight: 600, 
-                  color: "#1e293b", 
+                <div style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#1e293b",
                   marginBottom: 12,
                   paddingBottom: 8,
                   borderBottom: "2px solid #e2e8f0",
@@ -434,9 +618,9 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                   <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>priorité d'amélioration</span>
                 </div>
 
-                <div style={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
                   gap: 10,
                   background: "#ffffff",
                   borderRadius: 16,
@@ -447,12 +631,12 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                     const note = tNotes[matiere];
                     const coeff = coeffs[matiere];
                     const nom = matiere;
-                    
+
                     let objectif = "";
                     let objectifColor = "";
                     let objectifBg = "";
                     let PriorityIcon = null;
-                    
+
                     if (note >= 18) {
                       objectif = "Maintien";
                       objectifColor = "#16a34a";
@@ -474,9 +658,9 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                       objectifBg = "#fef2f2";
                       PriorityIcon = <AlertCircle size={14} color="#dc2626" strokeWidth={2} />;
                     }
-                    
+
                     return (
-                      <div 
+                      <div
                         key={nom}
                         style={{
                           display: "flex",
@@ -490,18 +674,18 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                           <span style={{ fontWeight: 600, color: "#0f172a" }}>{nom}</span>
                           <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 6 }}>(×{coeff})</span>
                         </div>
-                        
-                        <div style={{ 
-                          fontWeight: 700, 
-                          fontSize: 18, 
+
+                        <div style={{
+                          fontWeight: 700,
+                          fontSize: 18,
                           color: noteColor(note),
                           width: 50,
                           textAlign: "center"
                         }}>
                           {note}/20
                         </div>
-                        
-                        <div style={{ 
+
+                        <div style={{
                           flex: 1,
                           marginLeft: 16,
                           display: "flex",
@@ -509,9 +693,9 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                           gap: 8
                         }}>
                           {PriorityIcon}
-                          <span style={{ 
-                            fontSize: 13, 
-                            fontWeight: 500, 
+                          <span style={{
+                            fontSize: 13,
+                            fontWeight: 500,
                             color: objectifColor,
                             background: objectifBg,
                             padding: "4px 12px",
@@ -525,7 +709,7 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
                     );
                   })}
                 </div>
-                
+
                 {/* Légende rapide */}
                 <div style={{
                   display: "flex",
@@ -559,78 +743,76 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
               </div>
 
               {/* mini aperçu barres dans le résumé */}
-              
+
             </>
           )}
 
-          {/* ── TAB NOTES DÉTAILLÉES ── */}
-          {dossierTab === "notes" && (
-            <div
-              style={{
-                background: "#fff",
-                borderRadius: 12,
-                overflow: "hidden",
-                border: "1px solid #e2e8f0"
-              }}
-            >
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc" }}>
-                    <th style={thStyle}>Matière</th>
-                    <th style={thStyle}>Coef.</th>
-                    <th style={thStyle}>Note</th>
-                    <th style={thStyle}>Points</th>
-                    <th style={thStyle}>Appréciation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MATIERES.map((mat) => {
-                    const note = tNotes[mat];
-                    const coef = coeffs[mat];
-                    const points = note * coef;
 
-                    let appreciation = "";
-                    let color = "";
-
-                    if (note >= 16) {
-                      appreciation = "Excellent";
-                      color = "#10b981";
-                    } else if (note >= 14) {
-                      appreciation = "Très Bien";
-                      color = "#3b82f6";
-                    } else if (note >= 10) {
-                      appreciation = "Bien";
-                      color = "#f59e0b";
-                    } else {
-                      appreciation = "À renforcer";
-                      color = "#ef4444";
-                    }
-
-                    return (
-                      <tr key={mat}>
-                        <td style={tdStyle}>{mat}</td>
-                        <td style={tdStyle}>{coef}</td>
-                        <td style={{ ...tdStyle, fontWeight: 700 }}>{note}/20</td>
-                        <td style={tdStyle}>{points}</td>
-                        <td style={{ ...tdStyle, color, fontWeight: 700 }}>{appreciation}</td>
+          {/* ── TAB BULLETIN ── */}
+          {dossierTab === "bulletin" && (
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "20px 24px" }}>
+              {/* Bandeau infos élève */}
+              <div style={{ background: "#f8fafc", padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, borderRadius: 10, marginBottom: 18, border: "1px solid #e2e8f0" }}>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Nom complet</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{getNomComplet(eleve)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Matricule</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.matricule}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Classe</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.classe}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Sexe</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.sexe === "M" ? "Masculin" : "Féminin"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Trimestre</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{trimestre}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Présences</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.presences.present}/{eleve.presences.total}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Statut</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: s.c, marginTop: 2 }}>{s.l}</div>
+                </div>
+              </div>
+              {/* Tableau des notes */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#0066CC" }}>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Matière</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Note</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Coef.</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Appréciation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {MATIERES.map((mat, idx) => (
+                      <tr key={mat} style={{ background: idx % 2 === 0 ? "#fff" : "#fafafa", borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "13px 16px", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{mat}</td>
+                        <td style={{ padding: "13px 16px", fontSize: 15, fontWeight: 700, color: noteColor(tNotes[mat]) }}>{tNotes[mat]}/20</td>
+                        <td style={{ padding: "13px 16px", fontSize: 14, color: "#94a3b8" }}>×{coeffs[mat]}</td>
+                        <td style={{ padding: "13px 16px", fontSize: 14, fontWeight: 600, color: noteColor(tNotes[mat]) }}>{noteLabel(tNotes[mat])}</td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: "#f8fafc" }}>
-                    <td colSpan="3" style={{ padding: "14px", fontWeight: 800, color: "#1e293b" }}>
-                      Total des points
-                    </td>
-                    <td style={{ padding: "14px", fontWeight: 800, color: "#1e293b" }}>
-                      {MATIERES.reduce((sum, mat) => sum + tNotes[mat] * coeffs[mat], 0)}
-                    </td>
-                    <td style={{ padding: "14px", fontWeight: 800, color: noteColor(m) }}>
-                      Moyenne : {m}/20
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                    ))}
+                    <tr style={{ background: "#eff6ff" }}>
+                      <td colSpan={2} style={{ padding: "13px 16px", fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Moyenne pondérée</td>
+                      <td colSpan={2} style={{ padding: "13px 16px", fontSize: 17, fontWeight: 800, color: "#0066CC" }}>{m}/20</td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td colSpan={2} style={{ padding: "10px 16px", fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Point fort : {mf} ({mx}/20)</td>
+                      <td colSpan={2} style={{ padding: "10px 16px", fontSize: 13, color: "#dc2626", fontWeight: 600 }}>À renforcer : {mw} ({mn}/20)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -643,6 +825,9 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
             <button onClick={handlePrint} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: bg, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <i className="ti ti-printer" style={{ fontSize: 20 }} /> Imprimer
             </button>
+            <button onClick={downloadBulletin} style={{ flex: 1, padding: 12, border: "1px solid #0066CC", borderRadius: 10, background: "#fff", color: "#0066CC", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-download" style={{ fontSize: 20 }} /> Télécharger
+            </button>
           </div>
         </div>
       </motion.div>
@@ -654,7 +839,8 @@ function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdi
    PAGE PRINCIPALE
 ───────────────────────────────────────────── */
 export default function Notes() {
-  const [students, setStudents] = useState(ELEVES);
+  const { showToast } = useToast();
+  const [students, setStudents] = useState(STUDENTS);
   const [coeffs, setCoeffs] = useState(INITIAL_COEFFS);
   const [notesData, setNotesData] = useState(INITIAL_NOTES);
   const [trimestre, setTrimestre] = useState("T1");
@@ -696,11 +882,11 @@ export default function Notes() {
   };
 
   const activeSearch = topSearch || search;
+  useEffect(() => { setPage(1); }, [trimestre]);
 
   const filtered = students.filter(e => {
     const matchClasse = classe === "Toutes les classes" || e.classe === classe;
-    const matchSearch = e.nom.toLowerCase().includes(activeSearch.toLowerCase());
-    const m = getMoyenne(notesData[e.id][trimestre]);
+    const matchSearch = getNomComplet(e).toLowerCase().includes(activeSearch.toLowerCase()); const m = getMoyenne(notesData[e.id][trimestre]);
     const s = statutInfo(m);
     const matchStatut = statut === "Tous les statuts" || s.l === statut;
     return matchClasse && matchSearch && matchStatut;
@@ -717,12 +903,13 @@ export default function Notes() {
     const rows = [["Nom", "Classe", ...MATIERES, "Moyenne", "Statut"]];
     students.forEach(e => {
       const m = getMoyenne(notesData[e.id][trimestre]);
-      rows.push([e.nom, e.classe, ...MATIERES.map(mat => notesData[e.id][trimestre][mat] ?? ""), m, statutInfo(m).l]);
+      rows.push([getNomComplet(e), e.classe, ...MATIERES.map(mat => notesData[e.id][trimestre][mat] ?? ""), m, statutInfo(m).l]);
     });
     const csv = rows.map(r => r.join(";")).join("\n");
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv);
     a.download = `notes_${trimestre}.csv`; a.click();
+    showToast("Export réussi", "success", `Le fichier notes_${trimestre}.csv a été téléchargé.`);
   };
 
   const resetFilters = () => { setClasse("Toutes les classes"); setSearch(""); setStatut("Tous les statuts"); setMatiere("Toutes les matières"); setTopSearch(""); setPage(1); };
@@ -752,14 +939,17 @@ export default function Notes() {
           T3: trimestre === "T3" ? initialNotes : emptyNotes,
         }
       }));
+      showToast("Élève ajouté avec succès", "success", `${studentData.prenom} ${studentData.nom} a été ajouté à la classe ${studentData.classe}.`);
     } else {
       setStudents(prev => prev.map(s => s.id === studentData.id ? studentData : s));
+      showToast("Élève mis à jour", "success", `Les informations de ${studentData.prenom} ${studentData.nom} ont été mises à jour.`);
     }
   };
 
   const handleDelete = (student) => {
     setStudents(prev => prev.filter(s => s.id !== student.id));
     setNotesData(prev => { const copy = { ...prev }; delete copy[student.id]; return copy; });
+    showToast("Élève supprimé", "warning", `${getNomComplet(student)} et toutes ses notes ont été supprimés.`);
   };
 
   const INSIGHTS = [
@@ -771,47 +961,6 @@ export default function Notes() {
 
   return (
     <div className="notes-page">
-      {/* Top Bar */}
-      <div className="notes-topbar">
-        <div className="search-box">
-          <i className="ti ti-search s-icon"></i>
-          <input placeholder="Rechercher un élève, une classe..." value={topSearch} onChange={e => { setTopSearch(e.target.value); setPage(1); }} />
-          <span className="kbd">⌘K</span>
-        </div>
-        <div className="topbar-right">
-          <div className="topbar-info" style={{ display: "flex", gap: 10 }}>
-            <i className="ti ti-school" style={{ fontSize: 20, color: "#3b82f6" }}></i>
-            <div><div className="label">Lycée Donka</div><div className="sub">Conakry, Guinée</div></div>
-          </div>
-          <div className="topbar-divider" />
-          <div className="topbar-info">
-            <select style={{ border: "none", outline: "none", fontWeight: 700, background: "transparent", color: "#1e293b", cursor: "pointer", paddingRight: 10 }} value={trimestre} onChange={e => { setTrimestre(e.target.value); setPage(1); }}>
-              <option value="T1">Trimestre 1</option>
-              <option value="T2">Trimestre 2</option>
-              <option value="T3">Trimestre 3</option>
-            </select>
-            <div className="sub">Année 2025-2026</div>
-          </div>
-          <div className="topbar-divider" />
-          <div style={{ position: "relative" }} ref={notifRef}>
-            <button className="topbar-bell" onClick={() => setShowNotif(v => !v)}><i className="ti ti-bell" style={{ fontSize: 20 }}></i><span className="badge">2</span></button>
-            <AnimatePresence>
-              {showNotif && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="dropdown-panel notif-panel">
-                  <div className="dp-title">Notifications</div>
-                  <div className="notif-item"><i className="ti ti-speakerphone" style={{ fontSize: 20, color: "#3b82f6", marginRight: 8 }} /><div><b>Notes validées</b><p>Le trimestre a été clôturé.</p></div></div>
-                  <div className="notif-item"><i className="ti ti-alert-triangle" style={{ fontSize: 20, color: "#f59e0b", marginRight: 8 }} /><div><b>{getDifficultyCount()} élèves en difficulté</b><p>Un suivi est recommandé.</p></div></div>
-                  <button className="dp-link" onClick={() => setShowNotif(false)}>Tout marquer comme lu</button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          <div className="topbar-profile">
-            <div className="topbar-avatar">MS</div>
-            <div><div className="name">M. Soumah</div><div className="role">Directeur</div></div>
-          </div>
-        </div>
-      </div>
 
       {/* Header */}
       <div className="notes-header">
@@ -980,7 +1129,7 @@ export default function Notes() {
                   return (
                     <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={el.id}>
                       <td style={{ color: "#94a3b8", fontWeight: 700 }}>{(safePage - 1) * perPage + i + 1}</td>
-                      <td><div className="eleve-cell"><div className="eleve-avatar" style={{ background: avatarColor(el.id) }}>{getInitials(el.nom)}</div><span className="eleve-name">{el.nom}</span></div></td>
+                      <td><div className="eleve-cell"><div className="eleve-avatar" style={{ background: avatarColor(el.id) }}>{getInitials(el)}</div><span className="eleve-name">{getNomComplet(el)}</span></div></td>
                       {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(mat => { const n = notesData[el.id][trimestre][mat]; return <td key={mat}><span className="note-val" style={{ color: noteColor(n) }}>{n}</span></td>; })}
                       <td><span className="moy-val" style={{ color: noteColor(m) }}>{m}</span></td>
                       <td><span className="statut-badge" style={{ color: s.c }}>{s.l}</span></td>
@@ -997,7 +1146,7 @@ export default function Notes() {
                         <button title="Plus" onClick={() => setCtxMenu(ctxMenu === el.id ? null : el.id)} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}>
                           <i className="ti ti-dots-vertical" />
                         </button>
-                        {ctxMenu === el.id && <ContextMenu eleve={el} onClose={() => setCtxMenu(null)} onView={setSel} onEdit={setEditSel} onEditInfo={setEditInfoSel}   />}
+                        {ctxMenu === el.id && <ContextMenu eleve={el} onClose={() => setCtxMenu(null)} onView={setSel} onEdit={setEditSel} onEditInfo={setEditInfoSel} onPrint={() => { setSel(el); }} />}
                       </div></td>
                     </motion.tr>
                   );
@@ -1014,14 +1163,14 @@ export default function Notes() {
           </table>
         </div>
 
-       
+
       </div>
 
       {/* Modales */}
       <AnimatePresence>
         {sel && <Modal key="view" eleve={sel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} getMoyenne={getMoyenne} onClose={() => setSel(null)} onEdit={(e) => { setSel(null); setTimeout(() => setEditSel(e), 150); }} />}
-        {editSel && <EditModal key="edit" eleve={editSel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} setNotesData={setNotesData} onClose={() => setEditSel(null)} />}
-        {showCoeffs && <CoeffModal key="coeffs" coeffs={coeffs} setCoeffs={setCoeffs} onClose={() => setShowCoeffs(false)} />}
+        {editSel && <EditModal key="edit" eleve={editSel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} setNotesData={setNotesData} onClose={() => setEditSel(null)} showToast={showToast} />}
+        {showCoeffs && <CoeffModal key="coeffs" coeffs={coeffs} setCoeffs={setCoeffs} onClose={() => setShowCoeffs(false)} showToast={showToast} />}
         {showAdd && <StudentModal key="add" onClose={() => setShowAdd(false)} onSave={handleSaveStudent} classes={CLASSES} trimestre={trimestre} />}
         {editInfoSel && <StudentModal key="editInfo" initialStudent={editInfoSel} onClose={() => setEditInfoSel(null)} onSave={handleSaveStudent} classes={CLASSES} trimestre={trimestre} />}
       </AnimatePresence>

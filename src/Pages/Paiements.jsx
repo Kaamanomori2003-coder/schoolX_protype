@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import "./Paiements.css";
-import { CLASSES, MODES_PAIEMENT, TRANCHES, TRANCHE_MONTANT, INITIAL_PAIEMENTS, getStatusInfo, REVENUS_MOIS } from "./paiementsData";
+import { CLASSES, MODES_PAIEMENT, TRANCHES, TYPES_PAIEMENT, MOIS_LIST, TRANCHE_MONTANT, INITIAL_PAIEMENTS, getStatusInfo, REVENUS_MOIS } from "./paiementsData";
 import ConfirmModal from "../components/ConfirmModal";
+import { useToast } from "../context/ToastContext";
 
 const fmt = n => n.toLocaleString("fr-FR");
+
 function respAvatar(name) {
   const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   return (
@@ -43,29 +45,64 @@ function CtxMenu({ p, onClose, onReceipt, onEdit, onDelete }) {
 }
 
 function PayModal({ paiement, onClose, onSave }) {
+  const { showToast } = useToast();
   const isEdit = !!paiement.id;
   const [form, setForm] = useState(isEdit ? paiement : {
-    eleve: "", classe: "Terminale A", tranche: "Tranche 1", montant: TRANCHE_MONTANT,
+    eleve: "", classe: "Terminale A", typePaiement: "Par tranche", tranche: "Tranche 1", mois: "Octobre", montant: "",
     date: new Date().toLocaleDateString("fr-FR"), mode: "Espèces"
   });
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!form.eleve.trim()) errs.eleve = "Le nom de l'élève est requis";
+    const m = parseInt(form.montant);
+    if (!form.montant || isNaN(m) || m <= 0) errs.montant = "Le montant doit être supérieur à 0";
+    if (!form.date || !form.date.trim()) errs.date = "La date est requise";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSave = () => {
+    if (!validate()) { showToast("Veuillez corriger les champs en rouge", "error"); return; }
     let stat = "Impayé";
     const m = parseInt(form.montant) || 0;
     if (m >= TRANCHE_MONTANT) stat = "Payé";
     else if (m > 0) stat = "Partiellement payé";
-    onSave({ ...form, id: form.id || `P${Date.now()}`, montant: m, status: stat,
+
+    const labelTranche = form.typePaiement === "Par mois" ? `Mois : ${form.mois || "Octobre"}` : form.tranche;
+
+    onSave({
+      ...form,
+      id: form.id || `P${Date.now()}`,
+      tranche: labelTranche,
+      montant: m,
+      status: stat,
       date: m > 0 && form.date === "-" ? new Date().toLocaleDateString("fr-FR") : form.date,
       mode: m > 0 && form.mode === "-" ? "Espèces" : form.mode
     });
+    showToast("Paiement enregistré", "success");
     onClose();
   };
-  const F = (label, key, type, opts) => (
+
+  const errStyle = { color: "#dc2626", fontSize: 12, marginTop: 4 };
+
+  const F = (label, key, type, opts) => {
+    const isRequired = label.includes("*");
+    const labelText = label.replace(" *", "");
+    return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>{label}</label>
-      {opts ? <select value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>{opts.map(o=><option key={o}>{o}</option>)}</select>
-        : <input type={type||"text"} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box", fontWeight: key==="montant"?700:400, color: key==="montant"?"#7c3aed":"inherit" }}/>}
+      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>
+        {labelText}
+        {isRequired && <span style={{ color: "#dc2626", marginLeft: 2 }}>*</span>}
+      </label>
+      {opts ? <select value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ width: "100%", padding: "10px", border: `1px solid ${errors[key]?"#dc2626":"#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }}>{opts.map(o=><option key={o}>{o}</option>)}</select>
+        : <input type={type||"text"} value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ width: "100%", padding: "10px", border: `1px solid ${errors[key]?"#dc2626":"#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box", fontWeight: key==="montant"?700:400, color: key==="montant"?"#7c3aed":"inherit" }}/>}
+      {errors[key] && <p style={errStyle}>{errors[key]}</p>}
     </div>
-  );
+    );
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
       <motion.div initial={{opacity:0,scale:.95}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:.95}} className="modal-content" onClick={e=>e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 440, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
@@ -82,14 +119,20 @@ function PayModal({ paiement, onClose, onSave }) {
           <button className="modal-close" onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
         </div>
         <div className="modal-body" style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
-          {F("Nom de l'élève","eleve")}
+          {F("Nom de l'élève *","eleve")}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {F("Classe","classe",null,CLASSES)}
-            {F("Tranche","tranche",null,TRANCHES)}
+            {F("Type de paiement","typePaiement",null,TYPES_PAIEMENT)}
+          </div>
+          <div style={{marginBottom: 12}}>
+            {form.typePaiement === "Par mois"
+              ? F("Mois concerné", "mois", null, MOIS_LIST)
+              : F("Tranche", "tranche", null, TRANCHES)
+            }
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            {F("Montant payé (GNF)","montant","number")}
-            {F("Date","date")}
+            {F("Montant payé (GNF) *","montant","number")}
+            {F("Date *","date")}
           </div>
           {F("Méthode de paiement","mode",null,MODES_PAIEMENT.filter(m=>m!=="-"))}
           <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
@@ -106,6 +149,7 @@ const COLORS = ["#7c3aed","#f59e0b","#3b82f6","#10b981"];
 const avatarBg = i => ["#7c3aed","#3b82f6","#10b981","#f59e0b","#ef4444","#ec4899"][i%6];
 
 export default function Paiements() {
+  const { showToast } = useToast();
   const [data, setData] = useState(INITIAL_PAIEMENTS);
   const [trancheFilter, setTrancheFilter] = useState("Tranche 1");
   const [classe, setClasse] = useState("Toutes");
@@ -160,6 +204,7 @@ export default function Paiements() {
     const a = document.createElement("a");
     a.href = "data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(rows.map(r=>r.join(";")).join("\n"));
     a.download = "paiements.csv"; a.click();
+    showToast("Export réussi", "success", "La liste des paiements a été exportée en CSV.");
   };
 
   const printReceipt = (p) => {
@@ -170,15 +215,23 @@ export default function Paiements() {
     w.document.write(`<table><tr><th>Description</th><th style="text-align:right">Montant</th></tr><tr><td>${p.tranche}</td><td style="text-align:right">${p.montant.toLocaleString()} GNF</td></tr></table>`);
     w.document.write(`<div class="total">Total: ${p.montant.toLocaleString()} GNF</div><p style="mt:40px;text-align:center;color:#9ca3af;font-size:12px">Mode: ${p.mode}</p></body></html>`);
     w.document.close(); w.print();
+    showToast("Reçu généré", "info", `Impression du reçu pour ${p.eleve}.`);
   };
 
   const handleSave = (s) => {
-    if (data.find(d => d.id === s.id)) setData(data.map(d => d.id === s.id ? s : d));
-    else setData([s, ...data]);
+    const isEdit = data.some(d => d.id === s.id);
+    if (isEdit) {
+      setData(data.map(d => d.id === s.id ? s : d));
+      showToast("Paiement mis à jour", "success", `Le paiement de ${s.eleve} a été enregistré.`);
+    } else {
+      setData([s, ...data]);
+      showToast("Paiement ajouté", "success", `Nouveau paiement enregistré pour ${s.eleve}.`);
+    }
   };
 
   const handleDelete = (p) => {
     setData(data.filter(d => d.id !== p.id));
+    showToast("Paiement supprimé", "warning", `Le paiement de ${p.eleve} a été retiré.`);
   };
 
   const statCards = [
@@ -257,8 +310,8 @@ export default function Paiements() {
               <span><span className="dot" style={{background:"#7c3aed"}}/>Encaissements</span>
             </div>
           </div>
-          <div style={{height:220}}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{height:220, width: "100%", minWidth: 0}}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
               <BarChart data={REVENUS_MOIS}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6"/>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 15,fill:'#9ca3af'}}/>

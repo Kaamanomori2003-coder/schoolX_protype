@@ -47,8 +47,7 @@ const bottomItems = [
   { label: "Guide d'utilisation",icon: "ti-help-circle"    },
 ];
 
-export default function Sidebar({ onNavigate, activePage }) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({ onNavigate, activePage, collapsed, setCollapsed}) {
   const [hovered,   setHovered]   = useState(null);
 
   const W = collapsed ? 64 : 240;

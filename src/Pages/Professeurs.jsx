@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
@@ -605,23 +606,58 @@ function ProfilProf({ prof, onRetour, onEdit }) {
 
 /* ─── MODAL FORM ─────────────────────────────────────────────── */
 function ProfModal({ initial, onClose, onSave }) {
+  const { showToast } = useToast();
   const [form, setForm] = useState(initial || {
     prenom:"", nom:"", sexe:"M", dateNaissance:"",
     adresse:"", telephone:"", email:"",
     diplome:"", experience:"", dateRecrutement:"",
     status:"Actif", matieres:"", classes:"",
   });
+  const [errors, setErrors] = useState({});
 
-  const F = ({ label, k, ph }) => (
+  const validate = () => {
+    const errs = {};
+    if (!form.prenom?.trim()) errs.prenom = "Le prénom est requis";
+    if (!form.nom?.trim()) errs.nom = "Le nom est requis";
+    if (!form.telephone?.trim()) errs.telephone = "Le téléphone est requis";
+    if (!form.dateNaissance?.trim()) errs.dateNaissance = "La date de naissance est requise";
+    if (!form.diplome?.trim()) errs.diplome = "Le diplôme est requis";
+    if (!form.experience?.trim()) errs.experience = "L'expérience est requise";
+    if (!form.dateRecrutement?.trim()) errs.dateRecrutement = "La date de recrutement est requise";
+    if (!form.matieres?.trim()) errs.matieres = "Les matières sont requises";
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errs.email = "Format email invalide";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) {
+      showToast("Veuillez corriger les champs en rouge", "error");
+      return;
+    }
+    onSave(form);
+  };
+
+  const F = ({ label, k, ph }) => {
+    const isRequired = label.includes("*");
+    const labelText = label.replace(" *", "");
+    return (
     <div>
-      <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:5 }}>{label}</label>
-      <input type="text" placeholder={ph} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})}
-        style={{ width:"100%", padding:"9px 12px", border:`1px solid ${t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
-        onFocus={e=>e.currentTarget.style.borderColor=t.blue}
-        onBlur={e=>e.currentTarget.style.borderColor=t.border}
+      <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:5 }}>
+        {labelText}
+        {isRequired && <span style={{ color:"#dc2626", marginLeft:2 }}>*</span>}
+      </label>
+      <input type="text" placeholder={ph} value={form[k]||""} onChange={e=>{setForm({...form,[k]:e.target.value});setErrors(ev=>({...ev,[k]:undefined}));}}
+        style={{ width:"100%", padding:"9px 12px", border:`1px solid ${errors[k]?"#dc2626":t.border}`, borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
+        onFocus={e=>e.currentTarget.style.borderColor=errors[k]?"#dc2626":t.blue}
+        onBlur={e=>e.currentTarget.style.borderColor=errors[k]?"#dc2626":t.border}
       />
+      {errors[k] && <p style={{ color:"#dc2626", fontSize:11, marginTop:3 }}>{errors[k]}</p>}
     </div>
-  );
+    );
+  };
 
   return (
     <ModalOverlay>
@@ -637,17 +673,17 @@ function ProfModal({ initial, onClose, onSave }) {
         </div>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-          <F label="Prénom"           k="prenom"          ph="Ex : Mamadou"              />
-          <F label="Nom"              k="nom"             ph="Ex : Diallo"               />
-          <F label="Date naissance"   k="dateNaissance"   ph="Ex : 15/03/1980"           />
-          <F label="Téléphone"        k="telephone"       ph="Ex : 621 11 22 33"         />
-          <F label="Email"            k="email"           ph="Ex : m.diallo@schoolx.gn"  />
-          <F label="Adresse"          k="adresse"         ph="Ex : Ratoma, Conakry"      />
-          <F label="Diplôme"          k="diplome"         ph="Ex : Master en Maths"      />
-          <F label="Expérience"       k="experience"      ph="Ex : 5 ans"               />
-          <F label="Date recrutement" k="dateRecrutement" ph="Ex : 01/09/2020"           />
-          <F label="Matières"         k="matieres"        ph="Ex : Maths, Physique"      />
-          <F label="Classes"          k="classes"         ph="Ex : Term A, 1ère S"       />
+          <F label="Prénom *"           k="prenom"          ph="Ex : Mamadou"              />
+          <F label="Nom *"              k="nom"             ph="Ex : Diallo"               />
+          <F label="Date naissance *"   k="dateNaissance"   ph="Ex : 15/03/1980"           />
+          <F label="Téléphone *"        k="telephone"       ph="Ex : 621 11 22 33"         />
+          <F label="Email"              k="email"           ph="Ex : m.diallo@schoolx.gn"  />
+          <F label="Adresse"            k="adresse"         ph="Ex : Ratoma, Conakry"      />
+          <F label="Diplôme *"          k="diplome"         ph="Ex : Master en Maths"      />
+          <F label="Expérience *"       k="experience"      ph="Ex : 5 ans"               />
+          <F label="Date recrutement *" k="dateRecrutement" ph="Ex : 01/09/2020"           />
+          <F label="Matières *"         k="matieres"        ph="Ex : Maths, Physique"      />
+          <F label="Classes"            k="classes"         ph="Ex : Term A, 1ère S"       />
         </div>
 
         <div style={{ marginTop:12 }}>
@@ -660,7 +696,7 @@ function ProfModal({ initial, onClose, onSave }) {
 
         <div style={{ display:"flex", gap:10, marginTop:22 }}>
           <button onClick={onClose} style={{ flex:1, padding:"10px", border:`1px solid ${t.border}`, borderRadius:9, background:t.surface, fontSize:13, fontWeight:500, cursor:"pointer", color:t.sub, fontFamily:t.font }}>Annuler</button>
-          <button onClick={()=>onSave(form)} style={{ flex:1, padding:"10px", border:"none", borderRadius:9, background:t.blue, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:t.font }}>
+          <button onClick={handleSubmit} style={{ flex:1, padding:"10px", border:"none", borderRadius:9, background:t.blue, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:t.font }}>
             {initial?"Enregistrer":"Ajouter"}
           </button>
         </div>
@@ -679,9 +715,7 @@ export default function Professeurs() {
   const [modal,    setModal]    = useState(false);
   const [editProf, setEditProf] = useState(null);
   const [delId,    setDelId]    = useState(null);
-  const [toast,    setToast]    = useState(null);
-
-  const showToast = (msg,type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
+  const { showToast } = useToast();
 
   const allMatieres = ["Tous",...new Set(profs.flatMap(p=>p.matieres))];
   const allStatus   = ["Tous","Actif","Congé","Suspendu"];
@@ -736,13 +770,7 @@ export default function Professeurs() {
   return (
     <div style={{ fontFamily:t.font, color:t.text }}>
 
-      {/* TOAST */}
-      {toast && (
-        <div style={{ position:"fixed", bottom:24, right:24, zIndex:999, background:toast.type==="error"?t.red:t.green, color:"#fff", padding:"11px 18px", borderRadius:10, fontSize:13, fontWeight:600, boxShadow:"0 4px 16px rgba(0,0,0,0.15)", display:"flex", alignItems:"center", gap:8 }}>
-          <i className={`ti ${toast.type==="error"?"ti-x":"ti-check"}`} style={{ fontSize:15 }} />
-          {toast.msg}
-        </div>
-      )}
+
 
       {/* HEADER */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22, flexWrap:"wrap", gap:12 }}>

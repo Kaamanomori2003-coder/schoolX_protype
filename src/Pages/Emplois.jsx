@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "../context/ToastContext";
 
 const t = {
   bg:"#f7f8fa", surface:"#ffffff", border:"#eaecf0",
@@ -118,14 +119,8 @@ export default function Emplois() {
   const [addModal, setAddModal] = useState(false);
   const [delModal, setDelModal] = useState(false);
   const [newClasse,setNewClasse]= useState("");
-  const [toast,    setToast]    = useState(null);
-
-  const emploi = emplois[classe] || defaultEmploi();
-
-  const showToast = (msg, type="success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
+  const [classError, setClassError] = useState("");
+  const { showToast } = useToast();
 
   /* ── Modifier une cellule ── */
   const handleCellChange = (jour, hi, val) => {
@@ -146,12 +141,28 @@ export default function Emplois() {
 
   /* ── Ajouter une classe ── */
   const addClasse = () => {
-    if (!newClasse.trim() || emplois[newClasse]) return;
-    setEmplois(prev => ({ ...prev, [newClasse]: defaultEmploi() }));
-    setClasse(newClasse);
+    const val = newClasse.trim();
+    if (!val) {
+      setClassError("Le nom de la classe est requis");
+      showToast("Veuillez corriger le champ en rouge", "error");
+      return;
+    }
+    if (val.length < 3) {
+      setClassError("Le nom de la classe doit contenir au moins 3 caractères (ex : 5ème A, Terminale B)");
+      showToast("Veuillez corriger le champ en rouge", "error");
+      return;
+    }
+    if (emplois[val]) {
+      setClassError("Cette classe existe déjà");
+      showToast("Cette classe existe déjà", "error");
+      return;
+    }
+    setEmplois(prev => ({ ...prev, [val]: defaultEmploi() }));
+    setClasse(val);
     setNewClasse("");
+    setClassError("");
     setAddModal(false);
-    showToast(`Classe "${newClasse}" ajoutée`);
+    showToast(`Classe "${val}" ajoutée`, "success");
   };
 
   /* ── Supprimer une classe ── */
@@ -172,7 +183,8 @@ export default function Emplois() {
     showToast("Emploi du temps réinitialisé");
   };
 
-  const allCours = Object.values(emploi).flat().filter(c => c && c !== "Récréation");
+  const currentEmploi = emplois[classe] || {};
+  const allCours = Object.values(currentEmploi).flat().filter(c => c && c !== "Récréation");
   const matiereCount = {};
   allCours.forEach(c => { matiereCount[c] = (matiereCount[c]||0)+1; });
   const topMatiere = Object.entries(matiereCount).sort((a,b)=>b[1]-a[1])[0];
@@ -180,19 +192,7 @@ export default function Emplois() {
   return (
     <div style={{ fontFamily:t.font, color:t.text }}>
 
-      {/* ── TOAST ── */}
-      {toast && (
-        <div style={{
-          position:"fixed", bottom:24, right:24, zIndex:999,
-          background: toast.type==="error" ? t.red : t.green,
-          color:"#fff", padding:"11px 18px", borderRadius:10,
-          fontSize:13, fontWeight:600, boxShadow:"0 4px 16px rgba(0,0,0,0.15)",
-          display:"flex", alignItems:"center", gap:8,
-        }}>
-          <i className={`ti ${toast.type==="error"?"ti-x":"ti-check"}`} style={{ fontSize:15 }} />
-          {toast.msg}
-        </div>
-      )}
+
 
       {/* ── HEADER ── */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22, flexWrap:"wrap", gap:12 }}>
@@ -243,7 +243,7 @@ export default function Emplois() {
         {[
           { icon:"ti-clock",    label:"Cours / semaine", value:`${allCours.length}h`,          c:t.blue,   bg:t.blueSoft  },
           { icon:"ti-book",     label:"Matières",         value:Object.keys(matiereCount).length, c:"#7c3aed", bg:"#f5f3ff" },
-          { icon:"ti-calendar", label:"Jours actifs",     value:JOURS.filter(j=>emploi[j]?.some(c=>c&&c!=="Récréation")).length, c:t.green, bg:t.greenSoft },
+          { icon:"ti-calendar", label:"Jours actifs",     value:JOURS.filter(j=>currentEmploi[j]?.some(c=>c&&c!=="Récréation")).length, c:t.green, bg:t.greenSoft },
           { icon:"ti-star",     label:"Matière phare",    value:topMatiere?.[0]||"—",           c:"#d97706", bg:"#fffbeb"  },
         ].map(s => (
           <div key={s.label} style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"13px 15px", display:"flex", alignItems:"center", gap:11, boxShadow:t.shadow }}>
@@ -293,7 +293,7 @@ export default function Emplois() {
                     {heure}
                   </td>
                   {JOURS.map((jour, ji) => {
-                    const cours   = emploi[jour]?.[hi] || "";
+                    const cours   = currentEmploi[jour]?.[hi] || "";
                     const mc      = getM(cours);
                     const key     = `${ji}-${hi}`;
                     const isHov   = hovered === key;
@@ -411,16 +411,17 @@ export default function Emplois() {
                 <i className="ti ti-x" style={{ fontSize:15 }} />
               </button>
             </div>
-            <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:6 }}>Nom de la classe</label>
+            <label style={{ fontSize:11, fontWeight:600, color:t.sub, display:"block", marginBottom:6 }}>Nom de la classe *</label>
             <input
               autoFocus
               type="text" placeholder="Ex : Terminale B, 5ème A..."
-              value={newClasse} onChange={e => setNewClasse(e.target.value)}
+              value={newClasse} onChange={e => { setNewClasse(e.target.value); setClassError(""); }}
               onKeyDown={e => e.key === "Enter" && addClasse()}
-              style={{ width:"100%", padding:"10px 12px", border:`1px solid ${t.border}`, borderRadius:9, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
-              onFocus={e => e.currentTarget.style.borderColor=t.blue}
-              onBlur={e  => e.currentTarget.style.borderColor=t.border}
+              style={{ width:"100%", padding:"10px 12px", border:`1px solid ${classError ? "#dc2626" : t.border}`, borderRadius:9, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:t.font, color:t.text }}
+              onFocus={e => e.currentTarget.style.borderColor = classError ? "#dc2626" : t.blue}
+              onBlur={e => e.currentTarget.style.borderColor = classError ? "#dc2626" : t.border}
             />
+            {classError && <p style={{ color: "#dc2626", fontSize: 11, marginTop: 4 }}>{classError}</p>}
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
               <button onClick={() => setAddModal(false)} style={{ flex:1, padding:"10px", border:`1px solid ${t.border}`, borderRadius:9, background:t.surface, fontSize:13, fontWeight:500, cursor:"pointer", color:t.sub, fontFamily:t.font }}>Annuler</button>
               <button onClick={addClasse} style={{ flex:1, padding:"10px", border:"none", borderRadius:9, background:t.blue, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:t.font }}>Créer</button>

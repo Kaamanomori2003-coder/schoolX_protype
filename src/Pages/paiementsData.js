@@ -1,6 +1,8 @@
 export const CLASSES = ["Terminale A", "Terminale D", "1ère S", "3ème B", "Seconde C", "4ème C", "5ème B", "6ème A"];
 export const MODES_PAIEMENT = ["Espèces", "Orange Money", "Mobile Money", "Carte bancaire", "-"];
+export const TYPES_PAIEMENT = ["Par tranche", "Par mois"];
 export const TRANCHES = ["Tranche 1", "Tranche 2", "Tranche 3"];
+export const MOIS_LIST = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
 export const TRANCHE_MONTANT = 500000;
 
