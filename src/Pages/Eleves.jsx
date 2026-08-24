@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { CLASSES, STUDENTS, getNomComplet, getInitials } from "./studentsData";
+import { STATUTS, getNomComplet, getEtablissementDestination, getEtablissementOrigine } from "./studentsData";
+import { aujourdhui, formatDate, finExclusion, estExclusionEnCours } from "./sanctionsData";
 import { useToast } from "../context/ToastContext";
+import { useSchoolData, ECOLE_SCHOOLX, ANNEE_COURANTE, ANNEE_PRECEDENTE } from "../context/SchoolDataContext";
 
 /* ─── THEME ──────────────────────────────────────────────────── */
 const t = {
@@ -17,56 +19,22 @@ const t = {
   greenSoft:"#f0fdf4",
   amber:    "#d97706",
   amberSoft:"#fffbeb",
+  amberMid: "#fde68a",
+  orange:   "#ea580c",
+  orangeSoft:"#fff7ed",
   red:      "#dc2626",
   redSoft:  "#fef2f2",
+  redMid:   "#fecaca",
+  redDark:  "#991b1b",
+  purple:   "#7c3aed",
+  purpleSoft:"#f5f3ff",
+  purpleMid:"#ddd6fe",
   radius:   "10px",
   radiusLg: "14px",
   shadow:   "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
   shadowMd: "0 4px 12px rgba(0,0,0,0.07)",
   font:     "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
 };
-
-/* ─── DATA ───────────────────────────────────────────────────── */
-const NOTES_PAR_DEFAUT = {
-  1: [
-    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:16,coef:5},
-    {matiere:"Français",     prof:"Mme Fatoumata Bah", note:14,coef:4},
-    {matiere:"Physique",     prof:"M. Ousmane Kouyaté",note:15,coef:4},
-    {matiere:"Anglais",      prof:"Mme Aïssatou Sow",  note:17,coef:3},
-  ],
-  2: [
-    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",note:11,coef:5},
-    {matiere:"Français",     prof:"Mme Fatoumata Bah", note:13,coef:4},
-    {matiere:"Histoire-Géo", prof:"M. Ibrahima Camara",note:12,coef:3},
-  ],
-  3: [
-    {matiere:"Mathématiques",prof:"Dr. Mamadou Diallo",  note:14,coef:5},
-    {matiere:"SVT",          prof:"Mme Kadiatou Traoré", note:16,coef:3},
-    {matiere:"Physique",     prof:"M. Ousmane Kouyaté",  note:13,coef:4},
-  ],
-};
-
-const PAIEMENTS_PAR_DEFAUT = {
-  1: { total:1500000, paye:1000000, historique:[
-    {date:"02/01/2025",montant:500000,mode:"Espèces", status:"Payé"},
-    {date:"05/02/2025",montant:500000,mode:"Mobile",  status:"Payé"},
-    {date:"01/03/2025",montant:500000,mode:"Virement",status:"En attente"},
-  ]},
-  2: { total:1200000, paye:600000, historique:[
-    {date:"03/01/2025",montant:600000,mode:"Espèces",status:"Payé"},
-    {date:"01/02/2025",montant:600000,mode:"Mobile", status:"En attente"},
-  ]},
-};
-
-const DATA = STUDENTS.map(s => ({
-  ...s,
-  initials: getInitials(s),
-  moyenne: NOTES_PAR_DEFAUT[s.id]
-    ? Math.round((NOTES_PAR_DEFAUT[s.id].reduce((a,n)=>a+n.note*n.coef,0) / NOTES_PAR_DEFAUT[s.id].reduce((a,n)=>a+n.coef,0)) * 10) / 10
-    : 0,
-  notes: NOTES_PAR_DEFAUT[s.id] || [],
-  paiements: PAIEMENTS_PAR_DEFAUT[s.id] || { total: 0, paye: 0, historique: [] },
-}));
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
 const noteColor = (n) =>
@@ -80,6 +48,42 @@ const noteBg = (n) =>
 
 const pStatusColor = (s) =>
   s === "Payé" ? {c:t.green,bg:t.greenSoft} : s === "En attente" ? {c:t.amber,bg:t.amberSoft} : {c:t.red,bg:t.redSoft};
+
+const statusColor = (s) => ({
+  "Actif":      {c:t.green,   bg:t.greenSoft },
+  "Inactif":    {c:t.red,     bg:t.redSoft   },
+  "Transféré":  {c:t.purple,  bg:t.purpleSoft},
+  "Exclu":      {c:t.redDark,  bg:t.redMid   },
+}[s] || {c:t.muted, bg:t.bg});
+
+// Suspension en cours = exclusion temporaire validée dont la date de fin n'est pas dépassée
+const suspensionActive = (eleve) => {
+  const fin = eleve?.suspension?.dateFin;
+  return fin && fin >= aujourdhui() ? eleve.suspension : null;
+};
+
+const sanctionTypeColor = (type) => ({
+  "Avertissement":        {c:t.amber,   bg:t.amberSoft },
+  "Blâme":                {c:t.orange,  bg:t.orangeSoft},
+  "Exclusion temporaire": {c:t.red,     bg:t.redSoft   },
+  "Exclusion définitive": {c:t.redDark, bg:t.redSoft   },
+}[type] || {c:t.muted, bg:t.bg});
+
+const sanctionStatutColor = (statut) => ({
+  "En attente": {c:t.amber, bg:t.amberSoft},
+  "Validée":    {c:t.green, bg:t.greenSoft},
+  "Rejetée":    {c:t.sub,   bg:"#f3f4f6"  },
+}[statut] || {c:t.muted, bg:t.bg});
+
+const evenementColor = (ev) => ({
+  "Inscription":          {c:t.blue,   bg:t.blueSoft,   icon:"ti-user-plus"      },
+  "Passage de classe":    {c:t.green,  bg:t.greenSoft,  icon:"ti-arrow-up-right" },
+  "Transfert entrant":    {c:t.amber,  bg:t.amberSoft,  icon:"ti-login"          },
+  "Transfert sortant":    {c:t.purple, bg:t.purpleSoft, icon:"ti-logout"         },
+  "Scolarité antérieure": {c:t.sub,    bg:t.bg,         icon:"ti-history"        },
+  "Exclusion temporaire": {c:t.red,    bg:t.redSoft,    icon:"ti-user-off"       },
+  "Exclusion définitive": {c:t.redDark,bg:t.redMid,     icon:"ti-ban"            },
+}[ev] || {c:t.muted, bg:t.bg, icon:"ti-point"});
 
 /* ─── PRIMITIVES ─────────────────────────────────────────────── */
 const Chip = ({label, c, bg}) => (
@@ -124,14 +128,14 @@ const TabBtn = ({active,icon,label,onClick}) => (
   </button>
 );
 
-const ActionBtn = ({icon,label,primary,onClick}) => (
+const ActionBtn = ({icon,label,primary,c,bg,border,onClick}) => (
   <button onClick={onClick} style={{
     display:"flex",alignItems:"center",gap:7,
-    padding:"9px 16px",border:primary?"none":`1px solid ${t.border}`,
+    padding:"9px 16px",border:primary?"none":`1px solid ${border||t.border}`,
     borderRadius:t.radius,cursor:"pointer",
     fontFamily:t.font,fontSize:13,fontWeight:500,
-    background:primary?t.blue:t.surface,
-    color:primary?"#fff":t.sub,
+    background:primary?t.blue:(bg||t.surface),
+    color:primary?"#fff":(c||t.sub),
     boxShadow:primary?`0 2px 8px rgba(37,99,235,0.25)`:t.shadow,
     transition:"all .15s",
   }}
@@ -142,6 +146,61 @@ const ActionBtn = ({icon,label,primary,onClick}) => (
     {label}
   </button>
 );
+
+const Bandeau = ({icon, c, bg, border, titre, children}) => (
+  <div style={{display:"flex",alignItems:"flex-start",gap:12,background:bg,border:`1px solid ${border}`,borderRadius:t.radius,padding:"13px 16px",marginBottom:14}}>
+    <i className={`ti ${icon}`} style={{fontSize:18,color:c,marginTop:1,flexShrink:0}} />
+    <div>
+      <div style={{fontSize:13,fontWeight:600,color:c}}>{titre}</div>
+      <div style={{fontSize:12,color:t.sub,marginTop:3}}>{children}</div>
+    </div>
+  </div>
+);
+
+const ParcoursEtape = ({etape, last}) => {
+  const ec = evenementColor(etape.evenement);
+  return (
+    <div style={{display:"flex",gap:12}}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
+        <div style={{width:28,height:28,borderRadius:"50%",background:ec.bg,border:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <i className={`ti ${ec.icon}`} style={{fontSize:14,color:ec.c}} />
+        </div>
+        {!last && <div style={{flex:1,width:2,background:t.border,marginTop:4}} />}
+      </div>
+      <div style={{flex:1,minWidth:0,paddingBottom:last?0:18}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:13,fontWeight:600,color:t.text}}>{etape.classe}</span>
+          <Chip label={etape.evenement} c={ec.c} bg={ec.bg} />
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",marginTop:4}}>
+          <span style={{fontSize:12,color:t.sub}}>
+            <i className="ti ti-calendar" style={{fontSize:12,color:t.muted,marginRight:5}} />
+            {etape.annee}
+          </span>
+          <span style={{fontSize:12,color:t.sub}}>
+            <i className="ti ti-building" style={{fontSize:12,color:t.muted,marginRight:5}} />
+            {etape.etablissement}
+          </span>
+        </div>
+        {etape.etablissementDestination && (
+          <div style={{fontSize:12,fontWeight:600,color:t.purple,marginTop:5}}>
+            <i className="ti ti-arrow-right" style={{fontSize:12,marginRight:5}} />
+            Destination : {etape.etablissementDestination}
+          </div>
+        )}
+        {(etape.details || etape.motif) && (
+          <div style={{fontSize:12,color:t.sub,marginTop:5,lineHeight:1.5}}>{etape.details || etape.motif}</div>
+        )}
+        {(etape.dateFin || etape.date) && (
+          <div style={{fontSize:12,fontWeight:600,color:t.red,marginTop:4}}>
+            <i className={`ti ${etape.dateFin?"ti-calendar-off":"ti-calendar-event"}`} style={{fontSize:12,marginRight:5}} />
+            {etape.dateFin ? `Jusqu'au ${formatDate(etape.dateFin)}` : `Décision du ${formatDate(etape.date)}`}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /* ─── STAT MINI ──────────────────────────────────────────────── */
 const StatBox = ({icon,label,value,c=t.blue,bg=t.blueSoft}) => (
@@ -157,8 +216,21 @@ const StatBox = ({icon,label,value,c=t.blue,bg=t.blueSoft}) => (
 );
 
 /* ─── PROFIL ÉLÈVE ───────────────────────────────────────────── */
-function Profil({eleve, onRetour}) {
+function Profil({eleve, onRetour, onNavigate}) {
+  const { getSanctionsEleve, getAbsencesEleve } = useSchoolData();
   const [tab, setTab] = useState("notes");
+  const parcours    = eleve.parcours || [];
+  const destination = getEtablissementDestination(eleve);
+  const origine     = getEtablissementOrigine(eleve);
+  const sanctions   = getSanctionsEleve(eleve.id);
+  const derniereSanction = sanctions.length
+    ? [...sanctions].sort((a,b)=>b.dateFait.localeCompare(a.dateFait))[0]
+    : null;
+  const exclusionEnCours = sanctions.find(estExclusionEnCours) || null;
+  const suspension       = suspensionActive(eleve);
+  const absences         = getAbsencesEleve(eleve.id);
+  const derniereAbsence  = absences[0] || null;
+  const absencesNonJustifiees = absences.filter(a=>!a.justifie).length;
   const reste  = eleve.paiements.total - eleve.paiements.paye;
   const tPres  = Math.round((eleve.presences.present / (eleve.presences.total||1)) * 100);
   const tPaie  = Math.round((eleve.paiements.paye   / (eleve.paiements.total||1)) * 100);
@@ -337,11 +409,40 @@ const downloadBulletin = () => {
       {/* ── TOP BAR ── */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <ActionBtn icon="ti-arrow-left" label="Retour" primary onClick={onRetour} />
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {onNavigate && (
+            <ActionBtn icon="ti-gavel" label="Sanctionner"
+              c={t.red} bg={t.redSoft} border={t.redMid}
+              onClick={()=>onNavigate("Discipline & sanctions",{studentId:eleve.id})}
+            />
+          )}
           <ActionBtn icon="ti-archive" label="Archiver" />
           <ActionBtn icon="ti-folder"  label="Dossier"  />
         </div>
       </div>
+
+      {/* ── BANDEAUX TRANSFERT ── */}
+      {origine && (
+        <Bandeau icon="ti-login" c={t.amber} bg={t.amberSoft} border={t.amberMid} titre={`Arrivé de ${origine}`}>
+          {getNomComplet(eleve)} a rejoint l'établissement par transfert entrant — sa scolarité antérieure figure dans le parcours scolaire.
+        </Bandeau>
+      )}
+
+      {eleve.status==="Transféré" && (
+        <Bandeau icon="ti-logout" c={t.purple} bg={t.purpleSoft} border={t.purpleMid} titre="Élève transféré">
+          {getNomComplet(eleve)} a quitté l'établissement pour{" "}
+          <strong style={{color:t.text}}>{destination || "un établissement non précisé"}</strong>.
+        </Bandeau>
+      )}
+
+      {exclusionEnCours && (
+        <Bandeau icon="ti-user-off" c={t.red} bg={t.redSoft} border={t.redMid}
+          titre={exclusionEnCours.type==="Exclusion définitive"
+            ? "Exclusion définitive en vigueur"
+            : `Exclusion en cours jusqu'au ${formatDate(finExclusion(exclusionEnCours))}`}>
+          {exclusionEnCours.motif} — sanction validée par la direction le {formatDate(exclusionEnCours.dateValidation)}.
+        </Bandeau>
+      )}
 
       {/* ── HERO CARD ── */}
       <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radiusLg,boxShadow:t.shadow,overflow:"hidden",marginBottom:14}}>
@@ -375,7 +476,10 @@ const downloadBulletin = () => {
                 </span>
                 <Chip label={eleve.classe}    c={t.sub}  bg="#f3f4f6" />
                 <Chip label={`Moy. ${moy}/20`} c={parseFloat(moy)>=12?t.green:t.amber} bg={parseFloat(moy)>=12?t.greenSoft:t.amberSoft} />
-                <Chip label={eleve.status} c={eleve.status==="Actif"?t.green:t.red} bg={eleve.status==="Actif"?t.greenSoft:t.redSoft} />
+                <Chip label={eleve.status} c={statusColor(eleve.status).c} bg={statusColor(eleve.status).bg} />
+                {suspension && (
+                  <Chip label={`Suspendu jusqu'au ${formatDate(suspension.dateFin)}`} c={t.red} bg={t.redSoft} />
+                )}
               </div>
             </div>
           </div>
@@ -398,8 +502,95 @@ const downloadBulletin = () => {
         </div>
       </div>
 
+      {/* ── PARCOURS SCOLAIRE ── */}
+      <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radiusLg,boxShadow:t.shadow,overflow:"hidden",marginBottom:14}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${t.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:14,fontWeight:600,color:t.text}}>
+            <i className="ti ti-route" style={{fontSize:14,color:t.muted,marginRight:7}} />
+            Parcours scolaire
+          </span>
+          <span style={{fontSize:12,color:t.muted}}>{parcours.length} étape{parcours.length>1?"s":""}</span>
+        </div>
+        {parcours.length===0
+          ? <div style={{padding:32,textAlign:"center",fontSize:13,color:t.muted}}>Aucun historique scolaire enregistré</div>
+          : (
+            <div style={{padding:"18px 20px"}}>
+              {parcours.map((etape,i)=>(
+                <ParcoursEtape key={`${etape.annee}-${i}`} etape={etape} last={i===parcours.length-1} />
+              ))}
+            </div>
+          )
+        }
+      </div>
+
+      {/* ── DISCIPLINE (lecture seule) ── */}
+      <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radiusLg,boxShadow:t.shadow,overflow:"hidden",marginBottom:14}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${t.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:14,fontWeight:600,color:t.text}}>
+            <i className="ti ti-gavel" style={{fontSize:14,color:t.muted,marginRight:7}} />
+            Discipline
+          </span>
+          <span style={{fontSize:12,color:t.muted}}>
+            {sanctions.length} sanction{sanctions.length>1?"s":""} au dossier
+          </span>
+        </div>
+        {!derniereSanction
+          ? <div style={{padding:"20px",textAlign:"center",fontSize:13,color:t.muted}}>Aucune sanction au dossier</div>
+          : (
+            <div style={{padding:"14px 18px"}}>
+              <div style={{fontSize:10,color:t.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".4px",marginBottom:7}}>
+                Sanction la plus récente
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
+                <Chip label={derniereSanction.type}   c={sanctionTypeColor(derniereSanction.type).c}     bg={sanctionTypeColor(derniereSanction.type).bg} />
+                <Chip label={derniereSanction.statut} c={sanctionStatutColor(derniereSanction.statut).c} bg={sanctionStatutColor(derniereSanction.statut).bg} />
+                <span style={{fontSize:12,color:t.muted}}>Faits du {formatDate(derniereSanction.dateFait)}</span>
+              </div>
+              <div style={{fontSize:13,color:t.sub,lineHeight:1.5}}>{derniereSanction.motif}</div>
+            </div>
+          )
+        }
+      </div>
+
+      {/* ── ABSENCES (lecture seule) ── */}
+      <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radiusLg,boxShadow:t.shadow,overflow:"hidden",marginBottom:14}}>
+        <div style={{padding:"14px 18px",borderBottom:`1px solid ${t.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:14,fontWeight:600,color:t.text}}>
+            <i className="ti ti-calendar-off" style={{fontSize:14,color:t.muted,marginRight:7}} />
+            Absences relevées
+          </span>
+          <span style={{fontSize:12,color:t.muted}}>
+            {absences.length} absence{absences.length>1?"s":""} enregistrée{absences.length>1?"s":""}
+          </span>
+        </div>
+        {!derniereAbsence
+          ? <div style={{padding:"20px",textAlign:"center",fontSize:13,color:t.muted}}>Aucune absence relevée dans les séances saisies</div>
+          : (
+            <div style={{padding:"14px 18px"}}>
+              <div style={{fontSize:10,color:t.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".4px",marginBottom:7}}>
+                Absence la plus récente
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:7}}>
+                <Chip label={derniereAbsence.justifie?"Justifiée":"Non justifiée"}
+                  c={derniereAbsence.justifie?t.green:t.red}
+                  bg={derniereAbsence.justifie?t.greenSoft:t.redSoft} />
+                <span style={{fontSize:12,color:t.muted}}>
+                  {derniereAbsence.matiere} — {formatDate(derniereAbsence.date)}
+                </span>
+                {absencesNonJustifiees > 0 && (
+                  <Chip label={`${absencesNonJustifiees} à justifier`} c={t.amber} bg={t.amberSoft} />
+                )}
+              </div>
+              <div style={{fontSize:13,color:t.sub,lineHeight:1.5}}>
+                {derniereAbsence.motif || "Aucun motif communiqué"}
+              </div>
+            </div>
+          )
+        }
+      </div>
+
       {/* ── TABS ── */}
-      <div style={{display:"flex",gap:0,borderBottom:`1px solid ${t.border}`,marginBottom:16,overflowX:"auto"}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:0,borderBottom:`1px solid ${t.border}`,marginBottom:16}}>
         {[
           {key:"notes",    icon:"ti-clipboard-list",label:"Notes"},
           {key:"presence", icon:"ti-calendar-check", label:"Présence"},
@@ -415,7 +606,7 @@ const downloadBulletin = () => {
         <div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:14}}>
             <StatBox icon="ti-chart-bar"  label="Moyenne" value={`${moy}/20`} c={t.blue} bg={t.blueSoft} />
-            <StatBox icon="ti-book"       label="Matières" value={eleve.notes.length} c="#7c3aed" bg="#f5f3ff" />
+            <StatBox icon="ti-book"       label="Matières" value={eleve.notes.length} c={t.purple} bg={t.purpleSoft} />
             <StatBox icon="ti-trophy"     label="Meilleure" value={`${Math.max(...eleve.notes.map(n=>n.note))}/20`} c={t.amber} bg={t.amberSoft} />
           </div>
 
@@ -616,25 +807,30 @@ const downloadBulletin = () => {
 }
 
 /* ─── LISTE PRINCIPALE ───────────────────────────────────────── */
-export default function Eleves() {
+export default function Eleves({onNavigate}) {
   const { showToast } = useToast();
+  const { eleves, addEleve } = useSchoolData();
   const [search,   setSearch]   = useState("");
   const [filtre,   setFiltre]   = useState("Tous");
-  const [selected, setSelected] = useState(null);
+  const [filtreStatus, setFiltreStatus] = useState("Tous");
+  const [selected, setSelected] = useState(null); // id de l'élève affiché en fiche
   const [modal,    setModal]    = useState(false);
-  const [eleves,   setEleves]   = useState(DATA);
   const [errors,   setErrors]   = useState({});
+  const [typeInscription, setTypeInscription] = useState("nouvelle");
   const [form,     setForm]     = useState({
     prenom:"",nom:"",sexe:"M",dateNaissance:"",
     classe:"",numero:"",email:"",
     tuteur:"",numeroTuteur:"",adresse:"",
+    etablissementOrigine:"",classePrecedente:"",
   });
 
-  const classes  = ["Tous",...new Set(DATA.map(e=>e.classe))];
+  const classes  = ["Tous",...new Set(eleves.map(e=>e.classe))];
+  const statuts  = ["Tous",...STATUTS];
   const filtered = eleves.filter(e=>{
     const m = `${e.prenom} ${e.nom}`.toLowerCase().includes(search.toLowerCase());
     const c = filtre==="Tous" || e.classe===filtre;
-    return m&&c;
+    const s = filtreStatus==="Tous" || e.status===filtreStatus;
+    return m&&c&&s;
   });
 
   const validate = () => {
@@ -645,6 +841,10 @@ export default function Eleves() {
     if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = "Format email invalide";
     }
+    if (typeInscription==="transfert") {
+      if (!form.etablissementOrigine || !form.etablissementOrigine.trim()) errs.etablissementOrigine = "L'établissement d'origine est requis";
+      if (!form.classePrecedente || !form.classePrecedente.trim()) errs.classePrecedente = "La classe précédente est requise";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -654,22 +854,25 @@ export default function Eleves() {
       showToast("Veuillez corriger les champs en rouge", "error");
       return;
     }
-    setEleves([...eleves,{
-      ...form,
-      id:eleves.length+1,
-      initials:`${form.prenom[0]}${form.nom[0]}`.toUpperCase(),
-      matricule:`SCX-2024-00${eleves.length+1}`,
-      status:"Actif", moyenne:0,
-      notes:[], presences:{present:0,absent:0,retard:0,total:0},
-      paiements:{total:0,paye:0,historique:[]},
-    }]);
-    setForm({prenom:"",nom:"",sexe:"M",dateNaissance:"",classe:"",numero:"",email:"",tuteur:"",numeroTuteur:"",adresse:""});
+    const {etablissementOrigine, classePrecedente, ...infos} = form;
+    const parcours = typeInscription==="transfert"
+      ? [
+          {annee:ANNEE_PRECEDENTE,classe:classePrecedente,etablissement:etablissementOrigine,evenement:"Scolarité antérieure"},
+          {annee:ANNEE_COURANTE,  classe:form.classe,     etablissement:ECOLE_SCHOOLX,       evenement:"Transfert entrant"},
+        ]
+      : [{annee:ANNEE_COURANTE,classe:form.classe,etablissement:ECOLE_SCHOOLX,evenement:"Inscription"}];
+
+    addEleve({...infos, status:"Actif", parcours});
+    setForm({prenom:"",nom:"",sexe:"M",dateNaissance:"",classe:"",numero:"",email:"",tuteur:"",numeroTuteur:"",adresse:"",etablissementOrigine:"",classePrecedente:""});
+    setTypeInscription("nouvelle");
     setErrors({});
     setModal(false);
     showToast(`${form.prenom} ${form.nom} ajouté(e) avec succès`, "success");
   };
 
-  if(selected) return <Profil eleve={selected} onRetour={()=>setSelected(null)} />;
+  // On garde l'id plutôt que l'objet pour que la fiche reflète les mises à jour du contexte
+  const eleveSelectionne = selected ? eleves.find(e=>e.id===selected) : null;
+  if(eleveSelectionne) return <Profil eleve={eleveSelectionne} onRetour={()=>setSelected(null)} onNavigate={onNavigate} />;
 
   const total    = eleves.length;
   const actifs   = eleves.filter(e=>e.status==="Actif").length;
@@ -695,7 +898,7 @@ export default function Eleves() {
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
         <StatBox icon="ti-users"        label="Total élèves"     value={total}        c={t.blue}  bg={t.blueSoft}  />
         <StatBox icon="ti-circle-check" label="Élèves actifs"    value={actifs}       c={t.green} bg={t.greenSoft} />
-        <StatBox icon="ti-school"       label="Classes"          value={classes.length-1} c="#7c3aed" bg="#f5f3ff" />
+        <StatBox icon="ti-school"       label="Classes"          value={classes.length-1} c={t.purple} bg={t.purpleSoft} />
         <StatBox icon="ti-chart-bar"    label="Moyenne générale" value={`${moyGen}/20`} c={t.amber} bg={t.amberSoft} />
       </div>
 
@@ -712,6 +915,10 @@ export default function Eleves() {
         <select value={filtre} onChange={e=>setFiltre(e.target.value)}
           style={{padding:"10px 14px",border:`1px solid ${t.border}`,borderRadius:t.radius,fontSize:13,fontFamily:t.font,outline:"none",background:t.surface,cursor:"pointer",color:t.text,boxShadow:t.shadow,flexShrink:0}}>
           {classes.map(c=><option key={c}>{c}</option>)}
+        </select>
+        <select value={filtreStatus} onChange={e=>setFiltreStatus(e.target.value)}
+          style={{padding:"10px 14px",border:`1px solid ${t.border}`,borderRadius:t.radius,fontSize:13,fontFamily:t.font,outline:"none",background:t.surface,cursor:"pointer",color:t.text,boxShadow:t.shadow,flexShrink:0}}>
+          {statuts.map(s=><option key={s}>{s}</option>)}
         </select>
       </div>
 
@@ -730,7 +937,7 @@ export default function Eleves() {
               {filtered.map((e,i)=>{
                 const taux = Math.round((e.presences.present/(e.presences.total||1))*100);
                 return (
-                  <tr key={e.id} onClick={()=>setSelected(e)}
+                  <tr key={e.id} onClick={()=>setSelected(e.id)}
                     style={{borderBottom:`1px solid ${t.border}`,cursor:"pointer",transition:"background .12s"}}
                     onMouseEnter={el=>el.currentTarget.style.background=t.bg}
                     onMouseLeave={el=>el.currentTarget.style.background="transparent"}
@@ -777,11 +984,16 @@ export default function Eleves() {
 
                     {/* Statut */}
                     <td style={{padding:"13px 16px"}}>
-                      <Chip
-                        label={e.status}
-                        c={e.status==="Actif"?t.green:t.red}
-                        bg={e.status==="Actif"?t.greenSoft:t.redSoft}
-                      />
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        <Chip
+                          label={e.status}
+                          c={statusColor(e.status).c}
+                          bg={statusColor(e.status).bg}
+                        />
+                        {suspensionActive(e) && (
+                          <Chip label={`Suspendu jusqu'au ${formatDate(e.suspension.dateFin)}`} c={t.red} bg={t.redSoft} />
+                        )}
+                      </div>
                     </td>
 
                     {/* Chevron */}
@@ -827,6 +1039,32 @@ export default function Eleves() {
               </button>
             </div>
 
+            {/* Type d'inscription */}
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:11,fontWeight:600,color:t.sub,display:"block",marginBottom:6}}>Type d'inscription</label>
+              <div style={{display:"flex",gap:8}}>
+                {[
+                  {key:"nouvelle",  icon:"ti-user-plus", label:"Nouvelle inscription", hint:"Premier établissement"},
+                  {key:"transfert", icon:"ti-login",     label:"Élève transféré",      hint:"Venant d'une autre école"},
+                ].map(ti=>{
+                  const actif = typeInscription===ti.key;
+                  return (
+                    <button key={ti.key} onClick={()=>setTypeInscription(ti.key)} style={{
+                      flex:1,display:"flex",alignItems:"center",gap:9,textAlign:"left",
+                      padding:"10px 12px",border:`1px solid ${actif?t.blue:t.border}`,borderRadius:t.radius,
+                      background:actif?t.blueSoft:t.surface,cursor:"pointer",fontFamily:t.font,transition:"all .15s",
+                    }}>
+                      <i className={`ti ${ti.icon}`} style={{fontSize:16,color:actif?t.blue:t.muted,flexShrink:0}} />
+                      <span>
+                        <span style={{display:"block",fontSize:12,fontWeight:600,color:actif?t.blue:t.text}}>{ti.label}</span>
+                        <span style={{display:"block",fontSize:10,color:t.muted,marginTop:1}}>{ti.hint}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               {[
                 {label:"Prénom *",         key:"prenom",       ph:"Aminata"},
@@ -837,6 +1075,10 @@ export default function Eleves() {
                 {label:"Email",          key:"email",        ph:"aminata@email.com"},
                 {label:"Tuteur",         key:"tuteur",       ph:"Mamadou Diallo"},
                 {label:"Tél. tuteur",    key:"numeroTuteur", ph:"622 11 22 33"},
+                ...(typeInscription==="transfert" ? [
+                  {label:"Établissement d'origine *", key:"etablissementOrigine", ph:"Collège Sainte-Marie"},
+                  {label:"Classe précédente *",       key:"classePrecedente",     ph:"Première A"},
+                ] : []),
               ].map(f=>(
                 <div key={f.key}>
                   <label style={{fontSize:11,fontWeight:600,color:t.sub,display:"block",marginBottom:5}}>{f.label}</label>
