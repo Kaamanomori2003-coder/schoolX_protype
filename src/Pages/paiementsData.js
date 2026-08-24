@@ -23,10 +23,10 @@ export const INITIAL_PAIEMENTS = [
 
 export const getStatusInfo = (status) => {
   switch (status) {
-    case "Payé": return { bg: "#dcfce7", color: "#166534", icon: "✓" };
-    case "Partiellement payé": return { bg: "#ffedd5", color: "#c2410c", icon: "⌛" };
-    case "Impayé": return { bg: "#fee2e2", color: "#991b1b", icon: "⚠️" };
-    default: return { bg: "#f1f5f9", color: "#475569", icon: "-" };
+    case "Payé": return { bg: "#f0fdf4", color: "#059669", icon: "✓" };
+    case "Partiellement payé": return { bg: "#fffbeb", color: "#d97706", icon: "⌛" };
+    case "Impayé": return { bg: "#fef2f2", color: "#dc2626", icon: "⚠️" };
+    default: return { bg: "#f3f4f6", color: "#6b7280", icon: "-" };
   }
 };
 

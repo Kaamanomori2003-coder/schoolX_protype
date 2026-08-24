@@ -1,6 +1,6 @@
 export const MATIERES = ["Mathématiques","Physique","Français","Philosophie","SVT","Chimie"];
 export const MAT_ABR = {Mathématiques:"MATHS",Physique:"PHYSIQUE",Français:"FRANÇAIS",Philosophie:"PHILO",SVT:"SVT",Chimie:"CHIMIE"};
-export const MAT_CLR = {Mathématiques:"#3b82f6",Physique:"#06b6d4",Français:"#8b5cf6",Philosophie:"#f59e0b",SVT:"#10b981",Chimie:"#ef4444"};
+export const MAT_CLR = {Mathématiques:"#2563eb",Physique:"#6b7280",Français:"#9ca3af",Philosophie:"#d97706",SVT:"#059669",Chimie:"#dc2626"};
 export const COEFFS = {Mathématiques: 5, Physique: 4, Français: 3, Philosophie: 2, SVT: 3, Chimie: 3};
 
 const baseNotes = {
@@ -51,7 +51,7 @@ export const INITIAL_NOTES = Object.fromEntries(
   ])
 );
 
-const AC = ["#8b5cf6","#f59e0b","#10b981","#3b82f6","#f97316","#ef4444"];
+const AC = ["#2563eb","#059669","#d97706","#dc2626","#6b7280","#9ca3af"];
 export const avatarColor = id => AC[id % AC.length];
 export const getInitials = nom => nom.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase();
 export const getMoyenne = notes => {
@@ -64,8 +64,8 @@ export const getMoyenne = notes => {
   });
   return sumCoef > 0 ? Math.round((total / sumCoef) * 100) / 100 : 0;
 };
-export const noteColor = n => n>=14?"#10b981":n>=10?"#3b82f6":n>=8?"#f59e0b":"#ef4444";
-export const statutInfo = m => m>=14?{l:"Excellent",c:"#10b981"}:m>=10?{l:"Admis",c:"#3b82f6"}:m>=8?{l:"Passable",c:"#f59e0b"}:{l:"En difficulté",c:"#ef4444"};
+export const noteColor = n => n>=14?"#059669":n>=10?"#2563eb":n>=8?"#d97706":"#dc2626";
+export const statutInfo = m => m>=14?{l:"Excellent",c:"#059669"}:m>=10?{l:"Admis",c:"#2563eb"}:m>=8?{l:"Passable",c:"#d97706"}:{l:"En difficulté",c:"#dc2626"};
 export const EVO = [
   {classe:"Terminale A",moy:14.3,prev:13.1},{classe:"Terminale B",moy:12.1,prev:11.2},
   {classe:"Seconde A",moy:11.8,prev:10.6},{classe:"Seconde B",moy:10.2,prev:9.3},

@@ -15,6 +15,9 @@ const menuGroups = [
       { label: "Gestion des notes",       icon: "ti-clipboard-list" },
       { label: "Gestion des emplois",     icon: "ti-calendar"       },
       { label: "Gestion des professeurs", icon: "ti-school"         },
+      { label: "Absences & présences",    icon: "ti-calendar-check" },
+      { label: "Transfert d'élèves",      icon: "ti-transfer"       },
+      { label: "Discipline & sanctions",  icon: "ti-gavel"          },
     ],
   },
   {
