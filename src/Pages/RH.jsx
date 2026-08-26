@@ -1,102 +1,9 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNotifications } from "../context/NotificationsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import "./Notes.css";
 import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../context/ToastContext";
-import { t } from "../theme";
-
-const NEUTRAL_CHIP = t.border;
-
-/* ─── STYLES PARTAGÉS ────────────────────────────────────────── */
-const primaryBtnStyle = {
-  display: "flex", alignItems: "center", gap: 6,
-  background: t.blue, color: "#fff", border: "none",
-  borderRadius: t.radius, padding: "9px 16px",
-  fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-  fontFamily: t.font, transition: "all .15s", whiteSpace: "nowrap",
-  boxShadow: "0 2px 8px rgba(37,99,235,0.25)",
-};
-
-const cardStyle = {
-  background: t.surface,
-  border: `1px solid ${t.border}`,
-  borderRadius: t.radiusLg,
-  boxShadow: t.shadow,
-};
-
-const sectionTitleStyle = {
-  fontSize: 15, fontWeight: 700, color: t.text,
-  margin: "0 0 14px 0", display: "flex", alignItems: "center", gap: 8,
-};
-
-const thStyle = {
-  padding: "12px 16px", textAlign: "left",
-  fontSize: 11, fontWeight: 600, color: t.muted,
-  textTransform: "uppercase", letterSpacing: ".4px",
-  borderBottom: `1px solid ${t.border}`,
-};
-
-const chipStyle = {
-  fontSize: 11, fontWeight: 600, padding: "3px 10px",
-  borderRadius: 20, display: "inline-block", whiteSpace: "nowrap",
-};
-
-const labelStyle = {
-  display: "block", marginBottom: 5,
-  fontWeight: 600, fontSize: 11, color: t.sub,
-};
-
-const inputStyle = {
-  width: "100%", padding: "9px 12px",
-  border: `1px solid ${t.border}`, borderRadius: t.radius,
-  fontSize: 13, outline: "none", boxSizing: "border-box",
-  fontFamily: t.font, color: t.text, background: t.surface,
-};
-
-const errorTextStyle = { color: t.red, fontSize: 11, marginTop: 3 };
-
-const selectFilterStyle = {
-  width: "100%", padding: "10px 12px",
-  border: `1px solid ${t.border}`, borderRadius: t.radius,
-  fontSize: 13, outline: "none", background: t.surface,
-  color: t.text, fontFamily: t.font, cursor: "pointer", boxShadow: t.shadow,
-};
-
-const fieldBorder = (hasError) => `1px solid ${hasError ? t.red : t.border}`;
-
-const overlayStyle = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)",
-  display: "flex", alignItems: "center", justifyContent: "center",
-};
-
-const modalCardStyle = {
-  background: t.surface, borderRadius: t.radiusLg, overflow: "hidden",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.18)", fontFamily: t.font, color: t.text,
-};
-
-const modalHeaderStyle = {
-  padding: "18px 22px", borderBottom: `1px solid ${t.border}`,
-  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
-};
-
-const modalCloseStyle = {
-  background: t.bg, border: "none", borderRadius: 8,
-  width: 30, height: 30, display: "flex", alignItems: "center",
-  justifyContent: "center", cursor: "pointer", color: t.sub, fontSize: 15, flexShrink: 0,
-};
-
-const modalCancelBtnStyle = {
-  flex: 1, padding: "10px", border: `1px solid ${t.border}`,
-  borderRadius: t.radius, background: t.surface, fontSize: 12.5, fontWeight: 500,
-  cursor: "pointer", color: t.sub, fontFamily: t.font,
-};
-
-const modalConfirmBtnStyle = {
-  flex: 1, padding: "10px", border: "none", borderRadius: t.radius,
-  background: t.blue, color: "#fff", fontSize: 12.5, fontWeight: 600,
-  cursor: "pointer", fontFamily: t.font,
-};
 
 // Rich Mockup Personnel Dataset
 const initialEmployes = [
@@ -289,255 +196,66 @@ const initialCandidates = [
 ];
 
 const statusStyle = {
-  "Actif": { background: t.greenSoft, color: t.green },
-  "En congé": { background: t.amberSoft, color: t.amber },
-  "Suspendu": { background: t.redSoft, color: t.red },
-  "Absent": { background: t.redSoft, color: t.red },
+  "Actif": { bg: "rgba(34, 197, 94, 0.12)", color: "#22c55e", border: "1px solid rgba(34, 197, 94, 0.2)" },
+  "En congé": { bg: "rgba(59, 130, 246, 0.12)", color: "#3b82f6", border: "1px solid rgba(59, 130, 246, 0.2)" },
+  "Suspendu": { bg: "rgba(245, 158, 11, 0.12)", color: "#f59e0b", border: "1px solid rgba(245, 158, 11, 0.2)" },
+  "Absent": { bg: "rgba(239, 68, 68, 0.12)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.2)" },
 };
 
 const contratStyle = {
-  "CDI": { background: t.blueSoft, color: t.blue },
-  "CDD": { background: t.amberSoft, color: t.amber },
-  "Temps partiel": { background: NEUTRAL_CHIP, color: t.sub },
+  "CDI": { bg: "rgba(59, 130, 246, 0.12)", color: "#3b82f6", border: "1px solid rgba(59, 130, 246, 0.2)" },
+  "CDD": { bg: "rgba(245, 158, 11, 0.12)", color: "#f59e0b", border: "1px solid rgba(245, 158, 11, 0.2)" },
+  "Temps partiel": { bg: "rgba(139, 92, 246, 0.12)", color: "#8b5cf6", border: "1px solid rgba(139, 92, 246, 0.2)" },
 };
 
-const InfoItem = ({ icon, label, value }) => (
-  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: `1px solid ${t.border}` }}>
-    <i className={`ti ${icon}`} style={{ fontSize: 15, color: t.muted, marginTop: 1, width: 16, flexShrink: 0 }} />
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: t.text, fontWeight: 500 }}>{value}</div>
-    </div>
-  </div>
-);
-
-const TITRES = ["dr.", "dr", "m.", "mr", "mme", "mlle", "pr.", "pr"];
-
-function getInitiales(nom = "") {
-  const mots = nom.split(" ").filter(m => m && !TITRES.includes(m.toLowerCase()));
-  return mots.slice(0, 2).map(m => m[0]).join("").toUpperCase() || "?";
-}
-
 function renderAvatar(e, size = 60, fontSize = 18) {
+  let icon = e.avatar || "ti-user";
+  let bg = "#f1f5f9";
+  let color = "#475569";
+
+  if (icon === "ti-school") {
+    bg = "#eff6ff";
+    color = "#1e3a8a";
+  } else if (icon === "ti-briefcase") {
+    bg = "#f3e8ff";
+    color = "#7c3aed";
+  } else if (icon === "ti-device-laptop") {
+    bg = "#ecfdf5";
+    color = "#10b981";
+  } else if (icon === "ti-tool") {
+    bg = "#fef2f2";
+    color = "#ef4444";
+  } else {
+    // If the icon is an old emoji or not set
+    if (e.categorie === "Enseignant" || e.poste?.toLowerCase().includes("prof")) {
+      icon = "ti-school";
+      bg = "#eff6ff";
+      color = "#1e3a8a";
+    } else if (e.categorie === "Administration" || e.poste?.toLowerCase().includes("directeur") || e.poste?.toLowerCase().includes("comptable") || e.poste?.toLowerCase().includes("secrét")) {
+      icon = "ti-briefcase";
+      bg = "#f3e8ff";
+      color = "#7c3aed";
+    } else {
+      icon = "ti-tool";
+      bg = "#ecfdf5";
+      color = "#10b981";
+    }
+  }
+
   return (
     <div style={{
       width: size,
       height: size,
       borderRadius: "50%",
-      background: t.blueSoft,
-      border: `1px solid ${t.blueMid}`,
-      color: t.blue,
+      background: bg,
+      color: color,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       fontSize: fontSize,
-      fontWeight: 700,
-      flexShrink: 0,
-      boxSizing: "border-box"
+      flexShrink: 0
     }}>
-      {getInitiales(e.nom)}
-    </div>
-  );
-}
-
-const ActionBtn = ({ icon, label, primary, c, bg, border, onClick }) => (
-  <button onClick={onClick} style={{
-    display: "flex", alignItems: "center", gap: 7,
-    padding: "9px 16px", border: primary ? "none" : `1px solid ${border || t.border}`,
-    borderRadius: t.radius, cursor: "pointer",
-    fontFamily: t.font, fontSize: 12.5, fontWeight: 500,
-    background: primary ? t.blue : (bg || t.surface),
-    color: primary ? "#fff" : (c || t.sub),
-    boxShadow: primary ? "0 2px 8px rgba(37,99,235,0.25)" : t.shadow,
-    transition: "all .15s",
-  }}>
-    <i className={`ti ${icon}`} style={{ fontSize: 14 }} /> {label}
-  </button>
-);
-
-/* ── Dossier d'un membre du personnel (page pleine, lecture seule) ── */
-function FicheEnseignant({ staff, tab, setTab, onRetour, onEdit, onDelete, formatSeniority, daysOfWeek, parseSchedule }) {
-  const sectionTitle = { fontSize: 15, fontWeight: 700, color: t.text, margin: "0 0 12px 0", display: "flex", alignItems: "center", gap: 8 };
-
-  return (
-    <div style={{ fontFamily: t.font, color: t.text, maxWidth: 860, margin: "0 auto" }}>
-
-      {/* ── TOP BAR ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-        <ActionBtn icon="ti-arrow-left" label="Retour" primary onClick={onRetour} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <ActionBtn icon="ti-pencil" label="Modifier" onClick={() => onEdit(staff)} />
-          <ActionBtn icon="ti-trash" label="Supprimer" c={t.red} bg={t.redSoft} border={t.redSoft} onClick={() => onDelete(staff)} />
-        </div>
-      </div>
-
-      {/* ── HERO CARD ── */}
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden", marginBottom: 14 }}>
-        <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: 18, flexWrap: "wrap" }}>
-          {renderAvatar(staff, 52, 18)}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.text, lineHeight: 1.2 }}>{staff.nom}</h2>
-            <div style={{ fontSize: 11.5, color: t.muted, marginTop: 3 }}>{staff.poste}</div>
-            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-              <span style={{ ...chipStyle, ...contratStyle[staff.contrat] }}>{staff.contrat}</span>
-              <span style={{ ...chipStyle, ...statusStyle[staff.status] }}>{staff.status}</span>
-              <span style={{ ...chipStyle, background: NEUTRAL_CHIP, color: t.sub }}>{staff.categorie}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── TABS ── */}
-      <div style={{ display: "flex", flexWrap: "wrap", borderBottom: `1px solid ${t.border}`, marginBottom: 16 }}>
-        {[
-          { id: "profil", label: "Profil & Contrat", icon: "ti-user" },
-          { id: "planning", label: "Emploi du temps", icon: "ti-calendar" },
-          { id: "historique", label: "Historique", icon: "ti-history" }
-        ].map(tb => (
-          <button key={tb.id} onClick={() => setTab(tb.id)} style={{
-            background: "transparent",
-            color: tab === tb.id ? t.blue : t.sub,
-            border: "none",
-            borderBottom: tab === tb.id ? `2px solid ${t.blue}` : "2px solid transparent",
-            padding: "11px 16px", fontSize: 13, fontWeight: tab === tb.id ? 600 : 400,
-            cursor: "pointer", transition: "all .15s", fontFamily: t.font,
-            marginBottom: -1, whiteSpace: "nowrap",
-            display: "flex", alignItems: "center", gap: 7
-          }}>
-            <i className={`ti ${tb.icon}`} style={{ fontSize: 14 }} /> {tb.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── TAB 1 : PROFIL ── */}
-      {tab === "profil" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden" }}>
-            <div style={{ padding: "14px 18px", borderBottom: `1px solid ${t.border}` }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
-                <i className="ti ti-id" style={{ fontSize: 14, color: t.muted, marginRight: 7 }} />
-                Informations personnelles
-              </span>
-            </div>
-            <div style={{ padding: "6px 18px 16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0 32px" }}>
-                <div>
-                  <InfoItem icon="ti-phone" label="Téléphone" value={staff.telephone} />
-                  <InfoItem icon="ti-mail" label="E-mail" value={staff.email} />
-                </div>
-                <div>
-                  <InfoItem icon="ti-certificate" label="Dernier diplôme" value={staff.diplome} />
-                  <InfoItem icon="ti-file-text" label="Contrat & ancienneté" value={`${staff.contrat} (${formatSeniority(staff.dateEmbauche)})`} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, padding: "16px 18px" }}>
-            <h4 style={sectionTitle}>
-              <i className="ti ti-cash" style={{ color: t.blue, fontSize: 16 }} /> Informations Financières
-            </h4>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: t.sub }}>
-              <span>Salaire Brut :</span>
-              <strong style={{ color: t.text }}>{staff.salaire.toLocaleString()} GNF</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 5, color: t.sub }}>
-              <span>Primes :</span>
-              <span style={{ color: t.green, fontWeight: 600 }}>+{staff.primes.toLocaleString()} GNF</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 5, color: t.sub }}>
-              <span>Retenues :</span>
-              <span style={{ color: t.red, fontWeight: 600 }}>-{staff.retenues.toLocaleString()} GNF</span>
-            </div>
-            <div style={{ height: 1, background: t.border, margin: "10px 0" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <strong style={{ color: t.text }}>Net à percevoir :</strong>
-              <strong style={{ color: t.blue }}>{(staff.salaire + staff.primes - staff.retenues).toLocaleString()} GNF</strong>
-            </div>
-          </div>
-
-          {/* VIRTUAL DOCUMENTS DOWNLOAD SECTION */}
-          <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, padding: "16px 18px" }}>
-            <h4 style={sectionTitle}>
-              <i className="ti ti-folder" style={{ fontSize: 16, color: t.blue }} /> Documents administratifs joints
-            </h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {[
-                { nom: "Contrat_De_Travail_Signe.pdf", taille: "1.4 Mo" },
-                { nom: "Diplome_Et_Certificats.pdf", taille: "3.2 Mo" },
-                { nom: "Piece_D_Identite_Copie.pdf", taille: "850 Ko" }
-              ].map((doc, idx) => (
-                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 12px", border: `1px solid ${t.border}`, borderRadius: t.radius, background: t.surface }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <i className="ti ti-file-text" style={{ fontSize: 16, color: t.blue }} />
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <span style={{ fontSize: 13, color: t.text, fontWeight: 600, display: "block" }}>{doc.nom}</span>
-                      <span style={{ fontSize: 11, color: t.muted }}>{doc.taille}</span>
-                    </div>
-                  </div>
-                  <button onClick={() => alert(`Téléchargement simulé de ${doc.nom}`)} style={{ background: t.blueSoft, border: `1px solid ${t.blueMid}`, borderRadius: t.radius, padding: "5px 10px", cursor: "pointer", color: t.blue, fontSize: 12.5, fontWeight: 600, fontFamily: t.font, whiteSpace: "nowrap" }}>Télécharger</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 2 : PLANNING ── */}
-      {tab === "planning" && (
-        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, padding: "16px 18px" }}>
-          <h4 style={sectionTitle}>
-            <i className="ti ti-calendar" style={{ color: t.blue, fontSize: 16 }} /> Emploi du Temps Hebdomadaire
-          </h4>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(92px, 1fr))", gap: 6 }}>
-            {daysOfWeek.map(day => {
-              const schedule = parseSchedule(staff.emploiDuTemps);
-              const hours = schedule[day];
-              return (
-                <div key={day} style={{
-                  background: hours ? t.blueSoft : t.bg,
-                  border: hours ? `1px solid ${t.blueMid}` : `1px dashed ${t.border}`,
-                  borderRadius: t.radius, padding: 10, minHeight: 90, display: "flex", flexDirection: "column", justifyContent: "space-between"
-                }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: hours ? t.blue : t.muted, textTransform: "uppercase", letterSpacing: ".4px" }}>{day}</span>
-                  {hours ? (
-                    <div style={{ fontSize: 11, fontWeight: 600, color: t.blue, background: t.surface, padding: "4px 6px", borderRadius: 6, marginTop: 8, textAlign: "center" }}>
-                      {hours}
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: 11, color: t.muted, fontStyle: "italic", marginTop: 8, display: "block", textAlign: "center" }}>Libre</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 3 : HISTORIQUE ── */}
-      {tab === "historique" && (
-        <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, padding: "16px 18px" }}>
-          <h4 style={sectionTitle}>
-            <i className="ti ti-history" style={{ color: t.blue, fontSize: 16 }} /> Historique de Carrière &amp; Parcours
-          </h4>
-          <div style={{ position: "relative", borderLeft: `2px solid ${t.border}`, marginLeft: 10, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 16 }}>
-            {[
-              { date: "Mai 2026", titre: "Mise à jour Dossier Paie", desc: "Configuration des primes et retenues mensuelles." },
-              { date: "Septembre 2024", titre: "Évaluation Annuelle", desc: "Note pédagogique validée avec une mention d'excellence." },
-              { date: staff.dateEmbauche, titre: "Embauche Initiale", desc: `Intégration au sein de SchoolX en contrat ${staff.contrat}.` }
-            ].map((item, idx) => (
-              <div key={idx} style={{ position: "relative" }}>
-                <div style={{ position: "absolute", left: -22, top: 4, width: 10, height: 10, borderRadius: "50%", background: t.blue, border: `2px solid ${t.surface}` }} />
-                <span style={{ fontSize: 11, color: t.muted, fontWeight: 600 }}>{item.date}</span>
-                <strong style={{ fontSize: 13, color: t.text, display: "block", marginTop: 2 }}>{item.titre}</strong>
-                <span style={{ fontSize: 11.5, color: t.sub }}>{item.desc}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <i className={`ti ${icon}`} />
     </div>
   );
 }
@@ -887,178 +605,161 @@ export default function RH() {
     return parsed;
   };
 
-  if (selectedStaff) return (
-    <FicheEnseignant
-      staff={selectedStaff}
-      tab={dossierTab}
-      setTab={setDossierTab}
-      onRetour={() => setSelectedStaff(null)}
-      onEdit={e => {
-        setSelectedStaff(null);
-        setNewStaffForm({ ...e, emploiDuTemps: Array.isArray(e.emploiDuTemps) ? e.emploiDuTemps.join("; ") : e.emploiDuTemps });
-        setShowAddStaffModal(true);
-      }}
-      onDelete={e => { setSelectedStaff(null); setConfirmDelEmp(e); }}
-      formatSeniority={formatSeniority}
-      daysOfWeek={daysOfWeek}
-      parseSchedule={parseSchedule}
-    />
-  );
-
   return (
-    <div style={{ fontFamily: t.font, color: t.text }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", color: "#0f172a", padding: "4px 0 32px 0" }}>
 
       {/* ALERTS / NOTIFICATIONS SECTION */}
       <AnimatePresence>
         {alerts.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {alerts.slice(0, 3).map(alert => {
-              const alertColor = alert.type === "absences" ? t.red : alert.type === "cdd" ? t.amber : t.blue;
-              const alertSoft = alert.type === "absences" ? t.redSoft : alert.type === "cdd" ? t.amberSoft : t.blueSoft;
-              return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+            {alerts.slice(0, 3).map(alert => (
               <motion.div
                 key={alert.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 style={{
-                  background: t.surface,
-                  border: `1px solid ${t.border}`,
-                  borderLeft: `3px solid ${alertColor}`,
-                  borderRadius: t.radius,
-                  padding: "11px 16px", boxShadow: t.shadow,
-                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12
+                  background: "#fff",
+                  borderLeft: `4px solid ${alert.type === "absences" ? "#ef4444" :
+                      alert.type === "cdd" ? "#ea580c" :
+                        alert.type === "anniv" ? "#ec4899" : "#3b82f6"
+                    }`,
+                  borderRadius: "10px",
+                  padding: "12px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                  display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    background: alertSoft,
-                    color: alertColor,
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: alert.type === "absences" ? "rgba(239, 68, 68, 0.1)" : alert.type === "cdd" ? "rgba(234, 88, 12, 0.1)" : alert.type === "anniv" ? "rgba(236, 72, 153, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                    color: alert.type === "absences" ? "#ef4444" : alert.type === "cdd" ? "#ea580c" : alert.type === "anniv" ? "#ec4899" : "#3b82f6",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0
+                    justifyContent: "center"
                   }}>
                     <i className={`ti ${alert.type === "cdd" ? "ti-clock" :
                         alert.type === "anniv" ? "ti-gift" :
                           alert.type === "absences" ? "ti-alert-triangle" :
                             alert.type === "recruit" ? "ti-user-plus" : "ti-bell"
-                      }`} style={{ fontSize: 15 }} />
+                      }`} style={{ fontSize: 16 }} />
                   </div>
-                  <span style={{ fontSize: 13, color: t.text, fontWeight: 500 }}>{alert.text}</span>
+                  <span style={{ fontSize: 16, color: "#334155", fontWeight: 500 }}>{alert.text}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11.5, color: t.muted }}>{alert.date}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 14, color: "#94a3b8" }}>{alert.date}</span>
                   <button
                     onClick={() => setAlerts(alerts.filter(a => a.id !== alert.id))}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: t.muted, fontSize: 14, display: "flex", alignItems: "center" }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 15, display: "flex", alignItems: "center" }}
                   ><i className="ti ti-x" /></button>
                 </div>
               </motion.div>
-              );
-            })}
+            ))}
           </div>
         )}
       </AnimatePresence>
 
       {/* HEADER SECTION */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: t.text }}>
+          <h1 style={{ fontSize: 29, fontWeight: 800, margin: 0, background: "linear-gradient(90deg, #1e3a8a, #3b82f6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Gestion des Ressources Humaines
           </h1>
-          <p style={{ fontSize: 13, color: t.sub, margin: 0, marginTop: 4 }}>
+          <p style={{ fontSize: 16, color: "#64748b", marginTop: 4 }}>
             Pilotage complet de l'équipe scolaire, suivi des absences, congés, rémunérations et recrutement.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 12 }}>
           {activeTab === "recrutement" ? (
-            <button onClick={() => setShowAddCandidateModal(true)} style={{ ...primaryBtnStyle }}>
-              <i className="ti ti-user-plus" style={{ fontSize: 14 }} /> Nouveau Candidat
+            <button onClick={() => setShowAddCandidateModal(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "#8b5cf6", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", transition: "0.2s", boxShadow: "0 4px 12px rgba(139,92,246,0.2)" }}>
+              <i className="ti ti-user-plus" /> Nouveau Candidat
             </button>
           ) : activeTab === "conges" ? (
-            <button onClick={() => setShowAddLeaveModal(true)} style={{ ...primaryBtnStyle }}>
-              <i className="ti ti-plane-departure" style={{ fontSize: 14 }} /> Demander un congé
+            <button onClick={() => setShowAddLeaveModal(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "#ea580c", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", transition: "0.2s", boxShadow: "0 4px 12px rgba(234,88,12,0.2)" }}>
+              <i className="ti ti-plane-departure" /> Demander un congé
             </button>
           ) : (
             <button onClick={() => {
               setNewStaffForm({ nom: "", poste: "", salaire: "", contrat: "CDI", diplome: "", telephone: "", email: "", emploiDuTemps: "", avatar: "👨‍🏫", categorie: "Enseignant" });
               setShowAddStaffModal(true);
-            }} style={{ ...primaryBtnStyle }}>
-              <i className="ti ti-user-plus" style={{ fontSize: 14 }} /> Ajouter un Employé
+            }} style={{ display: "flex", alignItems: "center", gap: 8, background: "#1e3a8a", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontSize: 16, fontWeight: 600, cursor: "pointer", transition: "0.2s", boxShadow: "0 4px 12px rgba(30,58,138,0.2)" }}>
+              <i className="ti ti-user-plus" /> Ajouter un Employé
             </button>
           )}
         </div>
       </div>
 
       {/* STATS CARDS */}
-      <div className="stats-grid" style={{ marginBottom: 22 }}>
+      <div className="stats-grid" style={{ marginBottom: 28 }}>
         {[
-          { label: "Membres de l'équipe", value: employes.length, sub: "Actifs, congés, etc.", icon: <i className="ti ti-users" style={{ fontSize: 19 }} />, bg: t.blueSoft, color: t.blue },
-          { label: "Enseignants Actifs", value: activeTeachersCount, sub: "Sur tous les cycles", icon: <i className="ti ti-school" style={{ fontSize: 19 }} />, bg: t.greenSoft, color: t.green },
-          { label: "Absences du mois", value: totalAbsencesMonth, sub: "Retards et absences loggués", icon: <i className="ti ti-alert-triangle" style={{ fontSize: 19 }} />, bg: t.redSoft, color: t.red },
-          { label: "Congés en cours", value: activeLeavesCount, sub: "Absences autorisées", icon: <i className="ti ti-plane-departure" style={{ fontSize: 19 }} />, bg: t.amberSoft, color: t.amber },
+          { label: "Membres de l'équipe", value: employes.length, sub: "Actifs, congés, etc.", icon: <i className="ti ti-users" style={{ fontSize: 22 }} />, bg: "#eff6ff", color: "#3b82f6" },
+          { label: "Enseignants Actifs", value: activeTeachersCount, sub: "Sur tous les cycles", icon: <i className="ti ti-school" style={{ fontSize: 22 }} />, bg: "#ecfdf5", color: "#10b981" },
+          { label: "Absences du mois", value: totalAbsencesMonth, sub: "Retards et absences loggués", icon: <i className="ti ti-alert-triangle" style={{ fontSize: 22 }} />, bg: "#fef2f2", color: "#ef4444" },
+          { label: "Congés en cours", value: activeLeavesCount, sub: "Absences autorisées", icon: <i className="ti ti-plane-departure" style={{ fontSize: 22 }} />, bg: "#faf5ff", color: "#8b5cf6" },
         ].map((card, idx) => (
-          <motion.div key={idx} className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ ...cardStyle, cursor: "pointer" }}>
+          <motion.div key={idx} className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
             <div className="top">
-              <div className="icon-box" style={{ background: card.bg, color: card.color, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{card.icon}</div>
+              <div className="icon-box" style={{ background: card.bg, color: card.color, display: "flex", alignItems: "center", justifyContent: "center" }}>{card.icon}</div>
               <div>
-                <div className="stat-label" style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{card.label}</div>
-                <div className="stat-value" style={{ fontSize: 21, fontWeight: 700, color: t.text }}>{card.value}</div>
+                <div className="stat-label">{card.label}</div>
+                <div className="stat-value">{card.value}</div>
               </div>
             </div>
             <div className="bottom">
-              <div className="trend up" style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>{card.sub}</div>
+              <div className="trend up">{card.sub}</div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* NAVIGATION TABS */}
+      {/* PREMIUM NAVIGATION SEGMENTED BAR */}
       <div style={{
-        display: "flex",
-        flexWrap: "wrap",
-        borderBottom: `1px solid ${t.border}`,
-        marginBottom: 20
+        background: "#f1f5f9",
+        borderRadius: "16px",
+        padding: "6px",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: "6px",
+        marginBottom: "28px",
+        boxShadow: "inset 0 2px 4px rgba(0,0,0,0.03)"
       }}>
         {[
-          { id: "effectifs", label: "Effectifs", icon: <i className="ti ti-clipboard-list" style={{ fontSize: 14 }} /> },
-          { id: "fiches", label: "Fiches & Évaluations", icon: <i className="ti ti-folder" style={{ fontSize: 14 }} /> },
-          { id: "presences", label: "Présences", icon: <i className="ti ti-calendar" style={{ fontSize: 14 }} /> },
-          { id: "conges", label: "Congés", icon: <i className="ti ti-plane-departure" style={{ fontSize: 14 }} /> },
-          { id: "salaires", label: "Paie & Salaires", icon: <i className="ti ti-cash" style={{ fontSize: 14 }} /> },
-          { id: "recrutement", label: "Recrutement", icon: <i className="ti ti-briefcase" style={{ fontSize: 14 }} /> },
+          { id: "effectifs", label: "Liste des Effectifs", icon: <i className="ti ti-clipboard-list" />, color: "#1e3a8a" },
+          { id: "fiches", label: "Fiches & Évaluations", icon: <i className="ti ti-folder" />, color: "#3b82f6" },
+          { id: "presences", label: "Suivi Présences", icon: <i className="ti ti-calendar" />, color: "#0d9488" },
+          { id: "conges", label: "Congés & Absences", icon: <i className="ti ti-plane-departure" />, color: "#ea580c" },
+          { id: "salaires", label: "Paie & Salaires", icon: <i className="ti ti-cash" />, color: "#16a34a" },
+          { id: "recrutement", label: "Recrutement & CVs", icon: <i className="ti ti-briefcase" />, color: "#8b5cf6" },
         ].map(tab => {
           const isActive = activeTab === tab.id;
           return (
             <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               style={{
                 border: "none",
-                borderBottom: isActive ? `2px solid ${t.blue}` : "2px solid transparent",
-                padding: "10px 16px",
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
+                borderRadius: "12px",
+                padding: "10px 14px",
+                fontSize: "16px",
+                fontWeight: 700,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 7,
-                background: "transparent",
-                color: isActive ? t.blue : t.sub,
-                fontFamily: t.font,
-                marginBottom: -1,
-                transition: "all .15s",
-                whiteSpace: "nowrap",
+                gap: "8px",
+                background: isActive ? "#fff" : "transparent",
+                color: isActive ? tab.color : "#64748b",
+                boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.05)" : "none",
+                transition: "all 0.2s ease",
+                borderLeft: isActive ? `3px solid ${tab.color}` : "none",
                 outline: "none"
               }}
             >
-              {tab.icon} {tab.label}
+              {tab.icon} <span style={{ marginLeft: 6 }}>{tab.label}</span>
             </motion.button>
           );
         })}
@@ -1069,15 +770,15 @@ export default function RH() {
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
 
           {/* SEARCH BAR & DYNAMIC FILTERS */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ position: "relative", flex: "1 1 240px", minWidth: 0 }}>
-              <i className="ti ti-search" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.muted, fontSize: 15 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 19 }}>🔍</span>
               <input type="text" placeholder="Rechercher par nom ou poste..." value={search} onChange={e => setSearch(e.target.value)}
-                style={{ ...inputStyle, padding: "10px 12px 10px 36px", borderRadius: t.radius, boxShadow: t.shadow }} />
+                style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 16, outline: "none", boxSizing: "border-box", background: "#fff", transition: "all 0.2s" }} />
             </div>
 
-            <div style={{ flex: "0 1 180px", minWidth: 0 }}>
-              <select value={filterCategorie} onChange={e => setFilterCategorie(e.target.value)} style={{ ...selectFilterStyle }}>
+            <div>
+              <select value={filterCategorie} onChange={e => setFilterCategorie(e.target.value)} style={{ width: "100%", padding: "11px 12px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 16, outline: "none", background: "#fff", color: "#475569", fontWeight: 600 }}>
                 <option value="Tous">Toutes Catégories</option>
                 <option value="Enseignant">Enseignants</option>
                 <option value="Administration">Administration</option>
@@ -1085,8 +786,8 @@ export default function RH() {
               </select>
             </div>
 
-            <div style={{ flex: "0 1 180px", minWidth: 0 }}>
-              <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)} style={{ ...selectFilterStyle }}>
+            <div>
+              <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)} style={{ width: "100%", padding: "11px 12px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 16, outline: "none", background: "#fff", color: "#475569", fontWeight: 600 }}>
                 <option value="Tous">Tous Statuts</option>
                 <option value="Actif">Actifs</option>
                 <option value="En congé">En congé</option>
@@ -1095,8 +796,8 @@ export default function RH() {
               </select>
             </div>
 
-            <div style={{ flex: "0 1 190px", minWidth: 0 }}>
-              <select value={filterAnciennete} onChange={e => setFilterAnciennete(e.target.value)} style={{ ...selectFilterStyle }}>
+            <div>
+              <select value={filterAnciennete} onChange={e => setFilterAnciennete(e.target.value)} style={{ width: "100%", padding: "11px 12px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 16, outline: "none", background: "#fff", color: "#475569", fontWeight: 600 }}>
                 <option value="Tous">Toutes Anciennetés</option>
                 <option value="Moins de 2 ans">Moins de 2 ans</option>
                 <option value="2 à 5 ans">2 à 5 ans</option>
@@ -1107,73 +808,65 @@ export default function RH() {
 
           {/* TABLE CONTAINER */}
             
-          <div style={{ ...cardStyle, overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
-                <thead>
-                  <tr style={{ background: t.bg }}>
-                    {["Employé", "Poste", "Contrat", "Salaire", "Embauche", "Statut", "Actions"].map(h => (
-                      <th key={h} style={{ ...thStyle }}>{h}</th>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)" }}>
+            <div style={{ maxHeight: 480, overflowY: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                    {["Nom de l'Employé", "Département / Poste", "Type de Contrat", "Masse Salariale", "Date d'embauche", "Statut", "Actions"].map(h => (
+                      <th key={h} style={{ padding: "16px 20px", textAlign: "left", fontSize: 15, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
-                    <th style={{ ...thStyle, width: 30 }}></th>
                   </tr>
                 </thead>
                 <tbody>
                 <AnimatePresence>
-                  {filteredEmployes.map(e => (
-                    <motion.tr key={e.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      onClick={() => { setSelectedStaff(e); setDossierTab("profil"); }}
-                      style={{ borderBottom: `1px solid ${t.border}`, cursor: "pointer", transition: "background .12s" }}
-                      onMouseEnter={el => el.currentTarget.style.background = t.bg}
-                      onMouseLeave={el => el.currentTarget.style.background = "transparent"}
-                    >
-                      <td style={{ padding: "11px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                          {renderAvatar(e, 32, 12)}
+                  {filteredEmployes.map((e, idx) => (
+                    <motion.tr key={e.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ borderBottom: "1px solid #f1f5f9", background: idx % 2 === 0 ? "#fff" : "#fafafa", transition: "background 0.2s" }}>
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          {renderAvatar(e, 36, 18)}
                           <div>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: t.text, display: "block" }}>{e.nom}</span>
-                            <span style={{ fontSize: 11, color: t.muted, display: "block", marginTop: 1 }}>{e.email}</span>
+                            <span style={{ fontSize: 17, fontWeight: 700, color: "#1e293b", display: "block" }}>{e.nom}</span>
+                            <span style={{ fontSize: 14, color: "#64748b", display: "block", marginTop: 2 }}>{e.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: "11px 16px" }}>
-                        <span style={{ fontSize: 13, color: t.text, fontWeight: 600, display: "block" }}>{e.poste}</span>
-                        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: NEUTRAL_CHIP, color: t.sub, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                          <i className="ti ti-briefcase" style={{ fontSize: 11 }} /> {e.categorie}
+                      <td style={{ padding: "16px 20px" }}>
+                        <span style={{ fontSize: 16, color: "#334155", fontWeight: 600, display: "block" }}>{e.poste}</span>
+                        <span style={{ fontSize: 13, padding: "2px 6px", borderRadius: 4, background: "#f1f5f9", color: "#475569", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                          <i className="ti ti-briefcase" /> {e.categorie}
                         </span>
                       </td>
-                      <td style={{ padding: "11px 16px" }}>
-                        <span style={{ ...chipStyle, ...contratStyle[e.contrat] }}>{e.contrat}</span>
+                      <td style={{ padding: "16px 20px" }}>
+                        <span style={{ fontSize: 14, padding: "4px 10px", borderRadius: 20, fontWeight: 600, ...contratStyle[e.contrat] }}>{e.contrat}</span>
                       </td>
-                      <td style={{ padding: "11px 16px", fontSize: 13, fontWeight: 700, color: t.text }}>{e.salaire.toLocaleString()} GNF</td>
-                      <td style={{ padding: "11px 16px", fontSize: 13, color: t.sub }}>{e.dateEmbauche}</td>
-                      <td style={{ padding: "11px 16px" }}>
-                        <span style={{ ...chipStyle, ...statusStyle[e.status] }}>{e.status}</span>
+                      <td style={{ padding: "16px 20px", fontSize: 17, fontWeight: 800, color: "#1e3a8a" }}>{e.salaire.toLocaleString()} GNF</td>
+                      <td style={{ padding: "16px 20px", fontSize: 16, color: "#475569" }}>{e.dateEmbauche}</td>
+                      <td style={{ padding: "16px 20px" }}>
+                        <span style={{ fontSize: 14, padding: "4px 10px", borderRadius: 20, fontWeight: 600, ...statusStyle[e.status] }}>{e.status}</span>
                       </td>
-                      <td style={{ padding: "11px 14px" }} onClick={ev => ev.stopPropagation()}>
-                        <div style={{ display: "flex", alignItems: "center", flexWrap: "nowrap", gap: 6 }}>
-                          <button title="Modifier" onClick={ev => {
-                            ev.stopPropagation();
+                      <td style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => { setSelectedStaff(e); setDossierTab("profil"); }} style={{ background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+                            <i className="ti ti-eye" /> Dossier
+                          </button>
+                          <button onClick={() => {
                             setNewStaffForm({ ...e, emploiDuTemps: Array.isArray(e.emploiDuTemps) ? e.emploiDuTemps.join("; ") : e.emploiDuTemps });
                             setShowAddStaffModal(true);
-                          }} style={{ background: t.surface, color: t.sub, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 8px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center" }}>
-                            <i className="ti ti-pencil" style={{ fontSize: 14 }} />
+                          }} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                            <i className="ti ti-pencil" />
                           </button>
-                          <button title="Supprimer" onClick={ev => { ev.stopPropagation(); setConfirmDelEmp(e); }} style={{ background: t.redSoft, color: t.red, border: `1px solid ${t.redSoft}`, borderRadius: t.radius, padding: "5px 8px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center" }}>
-                            <i className="ti ti-trash" style={{ fontSize: 14 }} />
+                          <button onClick={() => setConfirmDelEmp(e)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                            <i className="ti ti-trash" />
                           </button>
                         </div>
-                      </td>
-                      <td style={{ padding: "11px 12px" }}>
-                        <i className="ti ti-chevron-right" style={{ fontSize: 15, color: t.muted }} />
                       </td>
                     </motion.tr>
                   ))}
                 </AnimatePresence>
                 {filteredEmployes.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: 48, color: t.muted, fontSize: 13 }}>
-                      <i className="ti ti-search" style={{ fontSize: 28, display: "block", marginBottom: 10, color: t.border }} />
+                    <td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "#64748b", fontSize: 17 }}>
                       Aucun membre de l'équipe trouvé avec les filtres sélectionnés.
                     </td>
                   </tr>
@@ -1189,48 +882,48 @@ export default function RH() {
       {activeTab === "fiches" && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
 
-          <div style={{ position: "relative", marginBottom: 16 }}>
-            <i className="ti ti-search" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.muted, fontSize: 15 }} />
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 19 }}>🔍</span>
             <input type="text" placeholder="Rechercher parmi les enseignants..." value={search} onChange={e => setSearch(e.target.value)}
-              style={{ ...inputStyle, padding: "10px 12px 10px 36px", borderRadius: t.radius, boxShadow: t.shadow }} />
+              style={{ width: "100%", padding: "12px 14px 12px 42px", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 16, outline: "none", boxSizing: "border-box", background: "#fff" }} />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14, alignItems: "start" }}>
-            {employes.filter(e => e.categorie === "Enseignant" && e.nom.toLowerCase().includes(search.toLowerCase())).map(emp => (
-              <motion.div key={emp.id} whileHover={{ y: -3, boxShadow: t.shadowMd }} style={{ ...cardStyle, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
+            {employes.filter(e => e.categorie === "Enseignant" && e.nom.toLowerCase().includes(search.toLowerCase())).map(t => (
+              <motion.div key={t.id} whileHover={{ y: -4, boxShadow: "0 12px 20px rgba(0,0,0,0.05)" }} style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "20px", display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  {renderAvatar(emp, 44, 14)}
-                  <div style={{ minWidth: 0 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: t.text }}>{emp.nom}</h3>
-                    <span style={{ fontSize: 11.5, color: t.blue, fontWeight: 600 }}>{emp.poste}</span>
+                  {renderAvatar(t, 44, 21)}
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "#1e293b" }}>{t.nom}</h3>
+                    <span style={{ fontSize: 14, color: "#3b82f6", fontWeight: 700 }}>{t.poste}</span>
                   </div>
                 </div>
 
-                <div style={{ background: t.bg, borderRadius: t.radius, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 11.5, color: t.sub, fontWeight: 500 }}>Évaluation Pédagogique :</span>
+                <div style={{ background: "#f8fafc", borderRadius: 12, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 15, color: "#64748b", fontWeight: 600 }}>Évaluation Pédagogique :</span>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <i className="ti ti-star" style={{ color: t.amber, fontSize: 15 }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{emp.evaluation} / 5</span>
+                    <i className="ti ti-star" style={{ color: "#f59e0b", fontSize: 17 }} />
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{t.evaluation} / 5</span>
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
-                  <div style={{ border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "8px 10px" }}>
-                    <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", display: "block" }}>Diplôme</span>
-                    <strong style={{ fontSize: 13, color: t.text, display: "block", marginTop: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{emp.diplome}</strong>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 15 }}>
+                  <div style={{ border: "1px solid #f1f5f9", borderRadius: 10, padding: "8px 10px" }}>
+                    <span style={{ color: "#94a3b8", display: "block" }}>Diplôme</span>
+                    <strong style={{ color: "#334155", display: "block", marginTop: 2, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{t.diplome}</strong>
                   </div>
-                  <div style={{ border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "8px 10px" }}>
-                    <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", display: "block" }}>Ancienneté</span>
-                    <strong style={{ fontSize: 13, color: t.text, display: "block", marginTop: 3 }}>{formatSeniority(emp.dateEmbauche)}</strong>
+                  <div style={{ border: "1px solid #f1f5f9", borderRadius: 10, padding: "8px 10px" }}>
+                    <span style={{ color: "#94a3b8", display: "block" }}>Ancienneté</span>
+                    <strong style={{ color: "#334155", display: "block", marginTop: 2 }}>{formatSeniority(t.dateEmbauche)}</strong>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                  <button onClick={() => { setSelectedStaff(emp); setDossierTab("planning"); }} style={{ flex: 1, padding: "8px 0", background: t.surface, color: t.sub, border: `1px solid ${t.border}`, borderRadius: t.radius, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                    <i className="ti ti-calendar" style={{ fontSize: 13 }} /> Emploi du Temps
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button onClick={() => { setSelectedStaff(t); setDossierTab("planning"); }} style={{ flex: 1, padding: "8px 0", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    <i className="ti ti-calendar" /> Emploi du Temps
                   </button>
-                  <button onClick={() => { setSelectedStaff(emp); setDossierTab("profil"); }} style={{ flex: 1, padding: "8px 0", background: t.blue, color: "#fff", border: "none", borderRadius: t.radius, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                    <i className="ti ti-eye" style={{ fontSize: 13 }} /> Dossier complet
+                  <button onClick={() => { setSelectedStaff(t); setDossierTab("profil"); }} style={{ flex: 1, padding: "8px 0", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    <i className="ti ti-eye" /> Dossier complet
                   </button>
                 </div>
               </motion.div>
@@ -1241,45 +934,45 @@ export default function RH() {
 
       {/* TAB CONTENT 3: DAILY ATTENDANCE LOGGER */}
       {activeTab === "presences" && (
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
 
           {/* MAIN PANEL */}
-          <div style={{ ...cardStyle, padding: "18px 20px" }}>
-            <h2 style={{ ...sectionTitleStyle }}>
-              <i className="ti ti-calendar" style={{ color: t.blue, fontSize: 16 }} /> Pointage Quotidien des Présences - {new Date().toLocaleDateString("fr-FR")}
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "24px" }}>
+            <h2 style={{ fontSize: 19, fontWeight: 800, color: "#1e3a8a", margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: 8 }}>
+              📅 Pointage Quotidien des Présences - {new Date().toLocaleDateString("fr-FR")}
             </h2>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 16 }}>
-              <div style={{ background: t.greenSoft, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: 12, textAlign: "center" }}>
-                <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", display: "block" }}>Présents aujourd'hui</span>
-                <span style={{ fontSize: 19, fontWeight: 700, color: t.green, marginTop: 4, display: "block" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <span style={{ fontSize: 14, color: "#166534", fontWeight: 700, display: "block" }}>PRÉSENTS TODAY</span>
+                <span style={{ fontSize: 23, fontWeight: 800, color: "#15803d", marginTop: 4, display: "block" }}>
                   {Object.values(attendanceToday).filter(v => v === "present").length}
                 </span>
               </div>
-              <div style={{ background: t.amberSoft, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: 12, textAlign: "center" }}>
-                <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", display: "block" }}>Retards aujourd'hui</span>
-                <span style={{ fontSize: 19, fontWeight: 700, color: t.amber, marginTop: 4, display: "block" }}>
+              <div style={{ background: "#fffbeb", border: "1px solid #fef08a", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <span style={{ fontSize: 14, color: "#854d0e", fontWeight: 700, display: "block" }}>RETARDS TODAY</span>
+                <span style={{ fontSize: 23, fontWeight: 800, color: "#a16207", marginTop: 4, display: "block" }}>
                   {Object.values(attendanceToday).filter(v => v === "retard").length}
                 </span>
               </div>
-              <div style={{ background: t.redSoft, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: 12, textAlign: "center" }}>
-                <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", display: "block" }}>Absents aujourd'hui</span>
-                <span style={{ fontSize: 19, fontWeight: 700, color: t.red, marginTop: 4, display: "block" }}>
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 700, display: "block" }}>ABSENTS TODAY</span>
+                <span style={{ fontSize: 23, fontWeight: 800, color: "#b91c1c", marginTop: 4, display: "block" }}>
                   {Object.values(attendanceToday).filter(v => v === "absent").length}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {employes.map(e => {
                 const currentStatus = attendanceToday[e.id] || "present";
                 return (
-                  <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 12, borderRadius: t.radius, border: `1px solid ${t.border}`, background: t.bg }}>
+                  <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12, borderRadius: 12, border: "1px solid #f1f5f9", background: "#f8fafc" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      {renderAvatar(e, 36, 12)}
+                      {renderAvatar(e, 36, 18)}
                       <div>
-                        <strong style={{ fontSize: 13, color: t.text, display: "block", fontWeight: 600 }}>{e.nom}</strong>
-                        <span style={{ fontSize: 11, color: t.muted }}>{e.poste}</span>
+                        <strong style={{ fontSize: 16, color: "#1e293b", display: "block" }}>{e.nom}</strong>
+                        <span style={{ fontSize: 14, color: "#64748b" }}>{e.poste}</span>
                       </div>
                     </div>
 
@@ -1287,41 +980,41 @@ export default function RH() {
                       <button
                         onClick={() => handleAttendanceChange(e.id, "present")}
                         style={{
-                          padding: "6px 11px", borderRadius: t.radius, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font,
-                          background: currentStatus === "present" ? t.greenSoft : t.surface,
-                          color: currentStatus === "present" ? t.green : t.sub,
-                          border: `1px solid ${currentStatus === "present" ? t.green : t.border}`,
-                          transition: "all .15s",
+                          padding: "6px 12px", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                          background: currentStatus === "present" ? "#dcfce7" : "#fff",
+                          color: currentStatus === "present" ? "#166534" : "#64748b",
+                          boxShadow: currentStatus === "present" ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
+                          border: currentStatus === "present" ? "none" : "1px solid #e2e8f0", transition: "0.2s",
                           display: "flex", alignItems: "center", gap: 4
                         }}
                       >
-                        <i className="ti ti-check" style={{ fontSize: 12 }} /> Présent
+                        <i className="ti ti-check" /> Présent
                       </button>
                       <button
                         onClick={() => handleAttendanceChange(e.id, "retard")}
                         style={{
-                          padding: "6px 11px", borderRadius: t.radius, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font,
-                          background: currentStatus === "retard" ? t.amberSoft : t.surface,
-                          color: currentStatus === "retard" ? t.amber : t.sub,
-                          border: `1px solid ${currentStatus === "retard" ? t.amber : t.border}`,
-                          transition: "all .15s",
+                          padding: "6px 12px", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                          background: currentStatus === "retard" ? "#fef9c3" : "#fff",
+                          color: currentStatus === "retard" ? "#854d0e" : "#64748b",
+                          boxShadow: currentStatus === "retard" ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
+                          border: currentStatus === "retard" ? "none" : "1px solid #e2e8f0", transition: "0.2s",
                           display: "flex", alignItems: "center", gap: 4
                         }}
                       >
-                        <i className="ti ti-clock" style={{ fontSize: 12 }} /> Retard
+                        <i className="ti ti-clock" /> Retard
                       </button>
                       <button
                         onClick={() => handleAttendanceChange(e.id, "absent")}
                         style={{
-                          padding: "6px 11px", borderRadius: t.radius, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font,
-                          background: currentStatus === "absent" ? t.redSoft : t.surface,
-                          color: currentStatus === "absent" ? t.red : t.sub,
-                          border: `1px solid ${currentStatus === "absent" ? t.red : t.border}`,
-                          transition: "all .15s",
+                          padding: "6px 12px", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                          background: currentStatus === "absent" ? "#fee2e2" : "#fff",
+                          color: currentStatus === "absent" ? "#991b1b" : "#64748b",
+                          boxShadow: currentStatus === "absent" ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
+                          border: currentStatus === "absent" ? "none" : "1px solid #e2e8f0", transition: "0.2s",
                           display: "flex", alignItems: "center", gap: 4
                         }}
                       >
-                        <i className="ti ti-x" style={{ fontSize: 12 }} /> Absent
+                        <i className="ti ti-x" /> Absent
                       </button>
                     </div>
                   </div>
@@ -1331,21 +1024,19 @@ export default function RH() {
           </div>
 
           {/* HISTORICAL LOG */}
-          <div style={{ ...cardStyle, padding: "18px 20px" }}>
-            <h3 style={{ ...sectionTitleStyle }}>
-              <i className="ti ti-history" style={{ color: t.blue, fontSize: 16 }} /> Historique des Présences
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "20px" }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1e3a8a", margin: "0 0 14px 0" }}>📜 Historique des Présences</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {attendanceLogs.map((log, idx) => (
-                <div key={idx} style={{ padding: 12, borderRadius: t.radius, border: `1px solid ${t.border}`, background: t.bg }}>
+                <div key={idx} style={{ padding: 12, borderRadius: 10, border: "1px solid #f1f5f9", background: "#fafafa" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 600, color: t.text }}>{log.date}</span>
-                    <span style={{ fontSize: 11, color: t.green, fontWeight: 600 }}>Actif</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#334155" }}>{log.date}</span>
+                    <span style={{ fontSize: 13, color: "#22c55e", fontWeight: 700 }}>Actif</span>
                   </div>
-                  <div style={{ display: "flex", gap: 10, fontSize: 11, color: t.sub }}>
-                    <span>P: <strong style={{ color: t.text }}>{log.presents}</strong></span>
-                    <span>R: <strong style={{ color: t.text }}>{log.retards}</strong></span>
-                    <span>A: <strong style={{ color: t.text }}>{log.absents}</strong></span>
+                  <div style={{ display: "flex", gap: 10, fontSize: 14, color: "#64748b" }}>
+                    <span>P: <strong>{log.presents}</strong></span>
+                    <span>R: <strong>{log.retards}</strong></span>
+                    <span>A: <strong>{log.absents}</strong></span>
                   </div>
                 </div>
               ))}
@@ -1356,52 +1047,50 @@ export default function RH() {
 
       {/* TAB CONTENT 4: LEAVE MANAGEMENT */}
       {activeTab === "conges" && (
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
 
           {/* DEMANDES DE CONGES */}
-          <div style={{ ...cardStyle, padding: "18px 20px" }}>
-            <h2 style={{ ...sectionTitleStyle }}>
-              <i className="ti ti-plane-departure" style={{ color: t.blue, fontSize: 16 }} /> Demandes &amp; Absences Planifiées
-            </h2>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "24px" }}>
+            <h2 style={{ fontSize: 19, fontWeight: 800, color: "#ea580c", margin: "0 0 16px 0" }}>🌴 Demandes &amp; Absences Planifiées</h2>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
                 <thead>
-                  <tr style={{ background: t.bg }}>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                     {["Collaborateur", "Type de congé", "Dates (Début - Fin)", "Jours", "Statut", "Décision"].map(h => (
-                      <th key={h} style={{ ...thStyle, padding: "11px 14px" }}>{h}</th>
+                      <th key={h} style={{ padding: "12px 14px", textAlign: "left", color: "#475569", fontWeight: 700 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {leaveRequests.map(r => (
-                    <tr key={r.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                      <td style={{ padding: "13px 14px" }}>
-                        <strong style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{r.nom}</strong>
-                        <span style={{ fontSize: 11, color: t.muted, display: "block", marginTop: 1 }}>{r.poste}</span>
+                    <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "12px 14px" }}>
+                        <strong>{r.nom}</strong>
+                        <span style={{ fontSize: 13, color: "#64748b", display: "block" }}>{r.poste}</span>
                       </td>
-                      <td style={{ padding: "13px 14px" }}>
-                        <span style={{ ...chipStyle, background: NEUTRAL_CHIP, color: t.sub }}>{r.type}</span>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span style={{ padding: "2px 6px", borderRadius: 4, background: "#f1f5f9", color: "#475569", fontSize: 14, fontWeight: 600 }}>{r.type}</span>
                       </td>
-                      <td style={{ padding: "13px 14px", fontSize: 13, color: t.sub }}>{r.debut} - {r.fin}</td>
-                      <td style={{ padding: "13px 14px", fontSize: 13, fontWeight: 600, color: t.text }}>{r.jours} j</td>
-                      <td style={{ padding: "13px 14px" }}>
+                      <td style={{ padding: "12px 14px", color: "#475569" }}>{r.debut} - {r.fin}</td>
+                      <td style={{ padding: "12px 14px", fontWeight: 700 }}>{r.jours} j</td>
+                      <td style={{ padding: "12px 14px" }}>
                         <span style={{
-                          ...chipStyle,
-                          background: r.statut === "Approuvé" ? t.greenSoft : r.statut === "Refusé" ? t.redSoft : t.amberSoft,
-                          color: r.statut === "Approuvé" ? t.green : r.statut === "Refusé" ? t.red : t.amber
+                          fontSize: 13, padding: "3px 8px", borderRadius: 12, fontWeight: 700,
+                          background: r.statut === "Approuvé" ? "#dcfce7" : r.statut === "Refusé" ? "#fee2e2" : "#fef9c3",
+                          color: r.statut === "Approuvé" ? "#15803d" : r.statut === "Refusé" ? "#b91c1c" : "#a16207"
                         }}>
                           {r.statut}
                         </span>
                       </td>
-                      <td style={{ padding: "13px 14px" }}>
+                      <td style={{ padding: "12px 14px" }}>
                         {r.statut === "En attente" ? (
                           <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => handleLeaveDecision(r.id, true)} style={{ background: t.greenSoft, color: t.green, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font }}>Approuver</button>
-                            <button onClick={() => handleLeaveDecision(r.id, false)} style={{ background: t.redSoft, color: t.red, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font }}>Refuser</button>
+                            <button onClick={() => handleLeaveDecision(r.id, true)} style={{ background: "#dcfce7", color: "#15803d", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Approuver</button>
+                            <button onClick={() => handleLeaveDecision(r.id, false)} style={{ background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Refuser</button>
                           </div>
                         ) : (
-                          <span style={{ fontSize: 11.5, color: t.muted }}>Traité</span>
+                          <span style={{ fontSize: 14, color: "#94a3b8" }}>Traité</span>
                         )}
                       </td>
                     </tr>
@@ -1412,20 +1101,18 @@ export default function RH() {
           </div>
 
           {/* BALANCE AND ACTION */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ ...cardStyle, padding: "18px 20px" }}>
-              <h3 style={{ ...sectionTitleStyle }}>
-                <i className="ti ti-beach" style={{ color: t.blue, fontSize: 16 }} /> Soldes de Congés Restants
-              </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: "20px" }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: "#ea580c", margin: "0 0 14px 0" }}>🌴 Soldes de Congés Restants</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {employes.map(e => (
                   <div key={e.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, marginBottom: 5 }}>
-                      <span style={{ fontWeight: 500, color: t.text }}>{e.nom}</span>
-                      <strong style={{ color: t.blue, fontWeight: 600 }}>{e.joursCongesRestants} / 30 jours</strong>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 600, color: "#334155" }}>{e.nom}</span>
+                      <strong style={{ color: "#ea580c" }}>{e.joursCongesRestants} / 30 jours</strong>
                     </div>
-                    <div style={{ height: 6, background: t.border, borderRadius: 99, overflow: "hidden" }}>
-                      <div style={{ width: `${(e.joursCongesRestants / 30) * 100}%`, height: "100%", background: t.blue, borderRadius: 99, transition: "width .6s ease" }} />
+                    <div style={{ height: 6, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ width: `${(e.joursCongesRestants / 30) * 100}%`, height: "100%", background: "#ea580c", borderRadius: 3 }} />
                     </div>
                   </div>
                 ))}
@@ -1439,32 +1126,31 @@ export default function RH() {
       {activeTab === "salaires" && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 16 }}>
-            {[
-              { label: "Masse de base", value: totalSalaires, icon: "ti-wallet", c: t.blue, bg: t.blueSoft },
-              { label: "Primes du mois", value: employes.reduce((sum, e) => sum + e.primes, 0), icon: "ti-trending-up", c: t.green, bg: t.greenSoft },
-              { label: "Retenues constatées", value: employes.reduce((sum, e) => sum + e.retenues, 0), icon: "ti-trending-down", c: t.red, bg: t.redSoft },
-              { label: "Net total à payer", value: employes.reduce((sum, e) => sum + (e.salaire + e.primes - e.retenues), 0), icon: "ti-cash", c: t.blue, bg: t.blueSoft },
-            ].map(box => (
-              <div key={box.label} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: t.shadow }}>
-                <div style={{ width: 38, height: 38, borderRadius: 9, background: box.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <i className={`ti ${box.icon}`} style={{ fontSize: 18, color: box.c }} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{box.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: t.text, marginTop: 2, lineHeight: 1.2 }}>{box.value.toLocaleString()} GNF</div>
-                </div>
-              </div>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
+            <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: 16 }}>
+              <span style={{ fontSize: 14, color: "#1e40af", fontWeight: 700, display: "block" }}>MASSE DE BASE</span>
+              <strong style={{ fontSize: 21, color: "#1d4ed8", display: "block", marginTop: 4 }}>{totalSalaires.toLocaleString()} GNF</strong>
+            </div>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 16 }}>
+              <span style={{ fontSize: 14, color: "#166534", fontWeight: 700, display: "block" }}>PRIMES DU MOIS</span>
+              <strong style={{ fontSize: 21, color: "#15803d", display: "block", marginTop: 4 }}>{employes.reduce((sum, e) => sum + e.primes, 0).toLocaleString()} GNF</strong>
+            </div>
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 16 }}>
+              <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 700, display: "block" }}>RETENUES CONSTATÉES</span>
+              <strong style={{ fontSize: 21, color: "#b91c1c", display: "block", marginTop: 4 }}>{employes.reduce((sum, e) => sum + e.retenues, 0).toLocaleString()} GNF</strong>
+            </div>
+            <div style={{ background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: 16 }}>
+              <span style={{ fontSize: 14, color: "#9d174d", fontWeight: 700, display: "block" }}>NET TOTAL À PAYER</span>
+              <strong style={{ fontSize: 21, color: "#be185d", display: "block", marginTop: 4 }}>{employes.reduce((sum, e) => sum + (e.salaire + e.primes - e.retenues), 0).toLocaleString()} GNF</strong>
+            </div>
           </div>
 
-          <div style={{ ...cardStyle, overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 16 }}>
               <thead>
-                <tr style={{ background: t.bg }}>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                   {["Collaborateur", "Salaire de base", "Primes (+)", "Retenues (-)", "Salaire Net", "Statut Paie", "Date Paiement", "Actions"].map(h => (
-                    <th key={h} style={{ ...thStyle }}>{h}</th>
+                    <th key={h} style={{ padding: "14px 18px", textAlign: "left", color: "#475569", fontWeight: 700 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1472,51 +1158,48 @@ export default function RH() {
                 {employes.map(e => {
                   const net = e.salaire + e.primes - e.retenues;
                   return (
-                    <tr key={e.id} style={{ borderBottom: `1px solid ${t.border}`, transition: "background .12s" }}
-                      onMouseEnter={el => el.currentTarget.style.background = t.bg}
-                      onMouseLeave={el => el.currentTarget.style.background = "transparent"}
-                    >
-                      <td style={{ padding: "13px 16px" }}>
-                        <strong style={{ fontSize: 13, fontWeight: 600, color: t.text, display: "block" }}>{e.nom}</strong>
-                        <span style={{ fontSize: 11, color: t.muted }}>{e.poste}</span>
+                    <tr key={e.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "14px 18px" }}>
+                        <strong style={{ color: "#1e293b", display: "block" }}>{e.nom}</strong>
+                        <span style={{ fontSize: 13, color: "#64748b" }}>{e.poste}</span>
                       </td>
-                      <td style={{ padding: "13px 16px", fontSize: 13, fontWeight: 500, color: t.sub }}>{e.salaire.toLocaleString()} GNF</td>
-                      <td style={{ padding: "13px 16px" }}>
+                      <td style={{ padding: "14px 18px", fontWeight: 600 }}>{e.salaire.toLocaleString()} GNF</td>
+                      <td style={{ padding: "14px 18px" }}>
                         <input
                           type="number"
                           value={e.primes}
                           onChange={(evt) => handleSalaryAdjustment(e.id, "primes", parseInt(evt.target.value) || 0)}
-                          style={{ ...inputStyle, width: 90, padding: "6px 8px", borderRadius: t.radius }}
+                          style={{ width: 80, padding: 6, border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }}
                         />
                       </td>
-                      <td style={{ padding: "13px 16px" }}>
+                      <td style={{ padding: "14px 18px" }}>
                         <input
                           type="number"
                           value={e.retenues}
                           onChange={(evt) => handleSalaryAdjustment(e.id, "retenues", parseInt(evt.target.value) || 0)}
-                          style={{ ...inputStyle, width: 90, padding: "6px 8px", borderRadius: t.radius }}
+                          style={{ width: 80, padding: 6, border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }}
                         />
                       </td>
-                      <td style={{ padding: "13px 16px", fontSize: 13, fontWeight: 700, color: t.text }}>{net.toLocaleString()} GNF</td>
-                      <td style={{ padding: "13px 16px" }}>
+                      <td style={{ padding: "14px 18px", fontWeight: 800, color: "#1e3a8a" }}>{net.toLocaleString()} GNF</td>
+                      <td style={{ padding: "14px 18px" }}>
                         <span style={{
-                          ...chipStyle,
-                          background: e.statutPaie === "Payé" ? t.greenSoft : t.amberSoft,
-                          color: e.statutPaie === "Payé" ? t.green : t.amber
+                          fontSize: 13, padding: "3px 8px", borderRadius: 12, fontWeight: 700,
+                          background: e.statutPaie === "Payé" ? "#dcfce7" : "#fef9c3",
+                          color: e.statutPaie === "Payé" ? "#15803d" : "#a16207"
                         }}>
                           {e.statutPaie}
                         </span>
                       </td>
-                      <td style={{ padding: "13px 16px", fontSize: 13, color: t.sub }}>{e.datePaie || "—"}</td>
-                      <td style={{ padding: "13px 14px" }}>
+                      <td style={{ padding: "14px 18px", color: "#64748b" }}>{e.datePaie || "—"}</td>
+                      <td style={{ padding: "14px 18px" }}>
                         <div style={{ display: "flex", gap: 6 }}>
                           {e.statutPaie === "En attente" && (
-                            <button onClick={() => handlePaySalary(e.id)} style={{ background: t.green, color: "#fff", border: "none", borderRadius: t.radius, padding: "5px 10px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                              <i className="ti ti-cash" style={{ fontSize: 12 }} /> Payer
+                            <button onClick={() => handlePaySalary(e.id)} style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                              <i className="ti ti-cash" /> Payer
                             </button>
                           )}
-                          <button onClick={() => setSelectedPayslip(e)} style={{ background: t.surface, color: t.sub, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 10px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                            <i className="ti ti-file-text" style={{ fontSize: 12 }} /> Bulletin
+                          <button onClick={() => setSelectedPayslip(e)} style={{ background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                            <i className="ti ti-file-text" /> Bulletin
                           </button>
                         </div>
                       </td>
@@ -1525,7 +1208,6 @@ export default function RH() {
                 })}
               </tbody>
             </table>
-            </div>
           </div>
         </motion.div>
       )}
@@ -1533,83 +1215,83 @@ export default function RH() {
       {/* TAB CONTENT 6: RECRUTEMENT KANBAN */}
       {activeTab === "recrutement" && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
             {[
-              { id: "CV", label: "CVs Reçus", icon: <i className="ti ti-download" style={{ fontSize: 15 }} />, color: t.blue, bg: t.blueSoft },
-              { id: "Entretien", label: "Entretiens en cours", icon: <i className="ti ti-messages" style={{ fontSize: 15 }} />, color: t.amber, bg: t.amberSoft },
-              { id: "Offres", label: "Offre formulée", icon: <i className="ti ti-hand-shake" style={{ fontSize: 15 }} />, color: t.blue, bg: t.blueSoft },
-              { id: "Engage", label: "Recruté(e)s", icon: <i className="ti ti-user-check" style={{ fontSize: 15 }} />, color: t.green, bg: t.greenSoft },
+              { id: "CV", label: "CVs Reçus", icon: <i className="ti ti-download" />, color: "#3b82f6", bg: "rgba(59, 130, 246, 0.05)" },
+              { id: "Entretien", label: "Entretiens en cours", icon: <i className="ti ti-messages" />, color: "#f59e0b", bg: "rgba(245, 158, 11, 0.05)" },
+              { id: "Offres", label: "Offre formulée", icon: <i className="ti ti-hand-shake" />, color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.05)" },
+              { id: "Engage", label: "Recruté(e)s", icon: <i className="ti ti-user-check" />, color: "#10b981", bg: "rgba(16, 185, 129, 0.05)" },
             ].map(col => {
               const colCandidates = candidates.filter(c => c.etape === col.id);
               return (
-                <div key={col.id} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, padding: 14, minHeight: 480 }}>
+                <div key={col.id} style={{ background: col.bg, border: `1px solid ${col.color}20`, borderRadius: 16, padding: "16px", minHeight: 480 }}>
 
                   {/* COLUMN HEADER */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <h3 style={{ fontSize: 12, fontWeight: 700, color: col.color, margin: 0, display: "flex", alignItems: "center", gap: 6, textTransform: "uppercase", letterSpacing: ".4px" }}>{col.icon} {col.label}</h3>
-                    <span style={{ background: col.bg, color: col.color, borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 800, color: col.color, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>{col.icon} {col.label}</h3>
+                    <span style={{ background: col.color, color: "#fff", borderRadius: 20, padding: "2px 8px", fontSize: 14, fontWeight: 700 }}>
                       {colCandidates.length}
                     </span>
                   </div>
 
                   {/* CARDS */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {colCandidates.map(cand => (
-                      <motion.div key={cand.id} whileHover={{ y: -3, boxShadow: t.shadowMd }} style={{ background: t.surface, borderRadius: t.radius, border: `1px solid ${t.border}`, boxShadow: t.shadow, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                      <motion.div key={cand.id} whileHover={{ y: -3, boxShadow: "0 8px 16px rgba(0,0,0,0.04)" }} style={{ background: "#fff", borderRadius: 12, border: "1px solid #cbd5e1", padding: "14px", display: "flex", flexDirection: "column", gap: 8 }}>
                         <div>
-                          <h4 style={{ fontSize: 13, fontWeight: 700, color: t.text, margin: 0 }}>{cand.nom}</h4>
-                          <span style={{ fontSize: 11.5, color: t.sub, display: "block", marginTop: 2 }}>{cand.poste}</span>
-                          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
-                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: NEUTRAL_CHIP, color: t.sub, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                              <i className="ti ti-briefcase" style={{ fontSize: 11 }} /> {cand.categorie || "Enseignant"}
+                          <h4 style={{ fontSize: 16, fontWeight: 800, color: "#1e293b", margin: 0 }}>{cand.nom}</h4>
+                          <span style={{ fontSize: 14, color: "#64748b", display: "block", marginTop: 2 }}>{cand.poste}</span>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                            <span style={{ fontSize: 13, padding: "2px 6px", borderRadius: 4, background: "#f1f5f9", color: "#475569", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <i className="ti ti-briefcase" /> {cand.categorie || "Enseignant"}
                             </span>
-                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: col.bg, color: col.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                              <i className="ti ti-school" style={{ fontSize: 11 }} /> {cand.diplome}
+                            <span style={{ fontSize: 13, padding: "2px 6px", borderRadius: 4, background: col.bg, color: col.color, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              <i className="ti ti-school" /> {cand.diplome}
                             </span>
                           </div>
                         </div>
 
-                        <div style={{ fontSize: 11, color: t.muted, display: "flex", flexDirection: "column", gap: 2, borderTop: `1px solid ${t.border}`, paddingTop: 8 }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-mail" style={{ fontSize: 12 }} /> {cand.email}</span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-phone" style={{ fontSize: 12 }} /> {cand.tel}</span>
+                        <div style={{ fontSize: 13, color: "#94a3b8", display: "flex", flexDirection: "column", gap: 2, borderTop: "1px solid #f1f5f9", paddingTop: 8 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-mail" /> {cand.email}</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><i className="ti ti-phone" /> {cand.tel}</span>
                           <span style={{ marginTop: 4, display: "block" }}>Ajouté le: {cand.date}</span>
                         </div>
 
                         {/* FLOW CONTROLS */}
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginTop: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginTop: 8 }}>
                           {col.id === "CV" && (
-                            <button onClick={() => handleMoveCandidate(cand.id, "Entretien")} style={{ background: t.amberSoft, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, color: t.amber, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                              <i className="ti ti-messages" style={{ fontSize: 12 }} /> Entretien <i className="ti ti-arrow-right" style={{ fontSize: 12 }} />
+                            <button onClick={() => handleMoveCandidate(cand.id, "Entretien")} style={{ background: "#fef9c3", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, color: "#854d0e", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                              <i className="ti ti-messages" /> Entretien <i className="ti ti-arrow-right" />
                             </button>
                           )}
                           {col.id === "Entretien" && (
-                            <div style={{ display: "flex", gap: 5 }}>
-                              <button onClick={() => handleMoveCandidate(cand.id, "CV")} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, color: t.sub, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                                <i className="ti ti-arrow-left" style={{ fontSize: 12 }} /> Retour
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => handleMoveCandidate(cand.id, "CV")} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                <i className="ti ti-arrow-left" /> Retour
                               </button>
-                              <button onClick={() => handleMoveCandidate(cand.id, "Offres")} style={{ background: t.blueSoft, border: `1px solid ${t.blueMid}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, color: t.blue, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                                <i className="ti ti-hand-shake" style={{ fontSize: 12 }} /> Offre <i className="ti ti-arrow-right" style={{ fontSize: 12 }} />
+                              <button onClick={() => handleMoveCandidate(cand.id, "Offres")} style={{ background: "#f3e8ff", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, color: "#6b21a8", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                <i className="ti ti-hand-shake" /> Offre <i className="ti ti-arrow-right" />
                               </button>
                             </div>
                           )}
                           {col.id === "Offres" && (
-                            <div style={{ display: "flex", gap: 5 }}>
-                              <button onClick={() => handleMoveCandidate(cand.id, "Entretien")} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, color: t.sub, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                                <i className="ti ti-arrow-left" style={{ fontSize: 12 }} /> Retour
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => handleMoveCandidate(cand.id, "Entretien")} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                <i className="ti ti-arrow-left" /> Retour
                               </button>
-                              <button onClick={() => handleMoveCandidate(cand.id, "Engage")} style={{ background: t.greenSoft, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 9px", fontSize: 12.5, fontWeight: 600, color: t.green, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", gap: 4 }}>
-                                <i className="ti ti-user-check" style={{ fontSize: 12 }} /> Recruter !
+                              <button onClick={() => handleMoveCandidate(cand.id, "Engage")} style={{ background: "#dcfce7", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 13, fontWeight: 700, color: "#166534", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                                <i className="ti ti-user-check" /> Recruter !
                               </button>
                             </div>
                           )}
                           {col.id === "Engage" && (
-                            <span style={{ fontSize: 11, color: t.green, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}><i className="ti ti-user-check" style={{ fontSize: 12 }} /> Prêt à l'embauche</span>
+                            <span style={{ fontSize: 13, color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><i className="ti ti-user-check" /> Prêt à l'embauche</span>
                           )}
                         </div>
                       </motion.div>
                     ))}
                     {colCandidates.length === 0 && (
-                      <div style={{ border: `1px dashed ${t.border}`, borderRadius: t.radius, padding: "20px 10px", textAlign: "center", color: t.muted, fontSize: 12 }}>
+                      <div style={{ border: "2px dashed #cbd5e1", borderRadius: 12, padding: "20px 10px", textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
                         Aucun candidat à cette étape
                       </div>
                     )}
@@ -1621,53 +1303,218 @@ export default function RH() {
         </motion.div>
       )}
 
+      {/* 4. DETAIL EMPLOYEE DOSSIER MODAL */}
+      <AnimatePresence>
+        {selectedStaff && (
+          <div className="modal-overlay" onClick={() => setSelectedStaff(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 560, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+
+              {/* MODAL HEADER */}
+              <div style={{ background: "#1e3a8a", padding: "24px", color: "#fff", position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    {renderAvatar(selectedStaff, 64, 32)}
+                    <div>
+                      <h2 style={{ fontSize: 21, fontWeight: 800, margin: 0 }}>{selectedStaff.nom}</h2>
+                      <span style={{ fontSize: 15, color: "#bfdbfe", fontWeight: 600 }}>{selectedStaff.poste}</span>
+                    </div>
+                  </div>
+                  <button className="modal-close" onClick={() => setSelectedStaff(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
+                </div>
+
+                {/* MINI INNER TABS */}
+                <div style={{ display: "flex", gap: 10, marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 14 }}>
+                  {[
+                    { id: "profil", label: "Profil & Contrat", icon: <i className="ti ti-user" style={{ fontSize: 18 }} /> },
+                    { id: "planning", label: "Emploi du temps", icon: <i className="ti ti-calendar" style={{ fontSize: 18 }} /> },
+                    { id: "historique", label: "Historique", icon: <i className="ti ti-history" style={{ fontSize: 18 }} /> }
+                  ].map(tab => (
+                    <button key={tab.id} onClick={() => setDossierTab(tab.id)} style={{
+                      background: dossierTab === tab.id ? "#fff" : "transparent",
+                      color: dossierTab === tab.id ? "#1e3a8a" : "#fff",
+                      border: "none", padding: "6px 12px", borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "all 0.2s",
+                      display: "flex", alignItems: "center", gap: 4
+                    }}>
+                      {tab.icon} {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* MODAL BODY */}
+              <div className="modal-body" style={{ padding: "24px", maxHeight: "60vh", overflowY: "auto" }}>
+
+                {/* SUB TAB 1: PROFIL */}
+                {dossierTab === "profil" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <span style={{ fontSize: 14, color: "#94a3b8", display: "block" }}>Téléphone</span>
+                        <strong style={{ fontSize: 16, color: "#334155" }}>{selectedStaff.telephone}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: 14, color: "#94a3b8", display: "block" }}>E-mail</span>
+                        <strong style={{ fontSize: 16, color: "#334155" }}>{selectedStaff.email}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: 14, color: "#94a3b8", display: "block" }}>Dernier Diplôme</span>
+                        <strong style={{ fontSize: 16, color: "#334155" }}>{selectedStaff.diplome}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: 14, color: "#94a3b8", display: "block" }}>Contrat &amp; Ancienneté</span>
+                        <strong style={{ fontSize: 16, color: "#334155" }}>{selectedStaff.contrat} ({formatSeniority(selectedStaff.dateEmbauche)})</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14, border: "1px solid #f1f5f9" }}>
+                      <h4 style={{ margin: "0 0 8px 0", fontSize: 15, fontWeight: 800, color: "#475569" }}>💵 Informations Financières</h4>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
+                        <span>Salaire Brut :</span>
+                        <strong>{selectedStaff.salaire.toLocaleString()} GNF</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, marginTop: 4 }}>
+                        <span>Primes :</span>
+                        <span style={{ color: "#16a34a", fontWeight: 700 }}>+{selectedStaff.primes.toLocaleString()} GNF</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, marginTop: 4 }}>
+                        <span>Retenues :</span>
+                        <span style={{ color: "#dc2626", fontWeight: 700 }}>-{selectedStaff.retenues.toLocaleString()} GNF</span>
+                      </div>
+                      <div style={{ height: 1, background: "#cbd5e1", margin: "8px 0" }} />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16 }}>
+                        <strong>Net à percevoir :</strong>
+                        <strong style={{ color: "#1e3a8a" }}>{(selectedStaff.salaire + selectedStaff.primes - selectedStaff.retenues).toLocaleString()} GNF</strong>
+                      </div>
+                    </div>
+
+                    {/* VIRTUAL DOCUMENTS DOWNLOAD SECTION */}
+                    <div>
+                      <h4 style={{ margin: "0 0 8px 0", fontSize: 15, fontWeight: 800, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}><i className="ti ti-folder" style={{ fontSize: 20 }} /> Documents administratifs joints</h4>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {[
+                          { nom: "Contrat_De_Travail_Signe.pdf", taille: "1.4 Mo" },
+                          { nom: "Diplome_Et_Certificats.pdf", taille: "3.2 Mo" },
+                          { nom: "Piece_D_Identite_Copie.pdf", taille: "850 Ko" }
+                        ].map((doc, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fafafa" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <i className="ti ti-file-text" style={{ fontSize: 26, color: "#94a3b8" }} />
+                              <div>
+                                <span style={{ fontSize: 15, color: "#334155", fontWeight: 600, display: "block" }}>{doc.nom}</span>
+                                <span style={{ fontSize: 13, color: "#94a3b8" }}>{doc.taille}</span>
+                              </div>
+                            </div>
+                            <button onClick={() => alert(`Téléchargement simulé de ${doc.nom}`)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: 15, fontWeight: 700 }}>Télécharger</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB TAB 2: PLANNING VISUAL GRID */}
+                {dossierTab === "planning" && (
+                  <div>
+                    <h4 style={{ margin: "0 0 12px 0", fontSize: 16, fontWeight: 800, color: "#1e3a8a" }}>📅 Emploi du Temps Hebdomadaire</h4>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
+                      {daysOfWeek.map(day => {
+                        const schedule = parseSchedule(selectedStaff.emploiDuTemps);
+                        const hours = schedule[day];
+                        return (
+                          <div key={day} style={{
+                            background: hours ? "#eff6ff" : "#fafafa",
+                            border: hours ? "1px solid #bfdbfe" : "1px dashed #cbd5e1",
+                            borderRadius: 10, padding: 10, minHeight: 90, display: "flex", flexDirection: "column", justifyContent: "space-between"
+                          }}>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: hours ? "#1e40af" : "#94a3b8" }}>{day}</span>
+                            {hours ? (
+                              <div style={{ fontSize: 13, fontWeight: 700, color: "#2563eb", background: "#fff", padding: "4px 6px", borderRadius: 4, marginTop: 8, textAlign: "center" }}>
+                                {hours}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: 13, color: "#cbd5e1", fontStyle: "italic", marginTop: 8, display: "block", textAlign: "center" }}>Libre</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB TAB 3: HISTORIQUE */}
+                {dossierTab === "historique" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <h4 style={{ margin: "0 0 4px 0", fontSize: 16, fontWeight: 800, color: "#1e3a8a" }}>📜 Historique de Carrière &amp; Parcours</h4>
+
+                    <div style={{ position: "relative", borderLeft: "2px solid #e2e8f0", marginLeft: 10, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+                      {[
+                        { date: "Mai 2026", titre: "Mise à jour Dossier Paie", desc: "Configuration des primes et retenues mensuelles." },
+                        { date: "Septembre 2024", titre: "Évaluation Annuelle", desc: "Note pédagogique validée avec une mention d'excellence." },
+                        { date: selectedStaff.dateEmbauche, titre: "Embauche Initiale", desc: `Intégration au sein de SchoolX en contrat ${selectedStaff.contrat}.` }
+                      ].map((item, idx) => (
+                        <div key={idx} style={{ position: "relative" }}>
+                          <div style={{ position: "absolute", left: -22, top: 4, width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", border: "2px solid #fff" }} />
+                          <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 700 }}>{item.date}</span>
+                          <strong style={{ fontSize: 15, color: "#334155", display: "block", marginTop: 2 }}>{item.titre}</strong>
+                          <span style={{ fontSize: 14, color: "#64748b" }}>{item.desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 5. PAYSLIP PRINT MODAL MOCKUP */}
       <AnimatePresence>
         {selectedPayslip && (
-          <div className="modal-overlay" onClick={() => setSelectedPayslip(null)} style={{ ...overlayStyle, zIndex: 350 }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, width: "min(440px,94vw)", padding: 24, border: `1px solid ${t.border}` }}>
+          <div className="modal-overlay" onClick={() => setSelectedPayslip(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 350 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: 440, padding: 24, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", border: "1px dashed #cbd5e1" }}>
 
               {/* PAYSLIP HEADER */}
-              <div style={{ textAlign: "center", borderBottom: `1px dashed ${t.border}`, paddingBottom: 14, marginBottom: 14 }}>
-                <strong style={{ fontSize: 15, color: t.blue, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}><i className="ti ti-building" style={{ fontSize: 18 }} /> SCHOOLX GROUP ACADEMY</strong>
-                <span style={{ fontSize: 11.5, color: t.sub }}>République de Guinée — Conakry</span>
-                <h3 style={{ margin: "10px 0 0 0", fontSize: 15, fontWeight: 700, color: t.text, letterSpacing: ".4px" }}>BULLETIN DE PAIE — MAI 2026</h3>
+              <div style={{ textAlign: "center", borderBottom: "1px dashed #cbd5e1", paddingBottom: 14, marginBottom: 14 }}>
+                <strong style={{ fontSize: 20, color: "#1e3a8a", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 6 }}><i className="ti ti-building" style={{ fontSize: 26 }} /> SCHOOLX GROUP ACADEMY</strong>
+                <span style={{ fontSize: 14, color: "#64748b" }}>République de Guinée — Conakry</span>
+                <h3 style={{ margin: "10px 0 0 0", fontSize: 17, fontWeight: 800, color: "#0f172a" }}>BULLETIN DE PAIE — MAI 2026</h3>
               </div>
 
               {/* EMPLOYEE INFO */}
-              <div style={{ fontSize: 11.5, color: t.sub, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14, background: t.bg, border: `1px solid ${t.border}`, padding: 12, borderRadius: t.radius }}>
-                <div>Collaborateur: <strong style={{ color: t.text }}>{selectedPayslip.nom}</strong></div>
-                <div>Poste: <strong style={{ color: t.text }}>{selectedPayslip.poste}</strong></div>
-                <div>Contrat: <strong style={{ color: t.text }}>{selectedPayslip.contrat}</strong></div>
-                <div>Date: <strong style={{ color: t.text }}>{selectedPayslip.datePaie || new Date().toLocaleDateString("fr-FR")}</strong></div>
+              <div style={{ fontSize: 15, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14, background: "#f8fafc", padding: 10, borderRadius: 8 }}>
+                <div>Collaborateur: <strong>{selectedPayslip.nom}</strong></div>
+                <div>Poste: <strong>{selectedPayslip.poste}</strong></div>
+                <div>Contrat: <strong>{selectedPayslip.contrat}</strong></div>
+                <div>Date: <strong>{selectedPayslip.datePaie || new Date().toLocaleDateString("fr-FR")}</strong></div>
               </div>
 
               {/* PAYSLIP CALCULATION GRID */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 13, borderBottom: `1px dashed ${t.border}`, paddingBottom: 12, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", color: t.sub }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 15, borderBottom: "1px dashed #cbd5e1", paddingBottom: 12, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>Salaire de base brut:</span>
-                  <span style={{ color: t.text, fontWeight: 500 }}>{selectedPayslip.salaire.toLocaleString()} GNF</span>
+                  <span>{selectedPayslip.salaire.toLocaleString()} GNF</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: t.green }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#16a34a" }}>
                   <span>Primes &amp; Gratifications:</span>
-                  <span style={{ fontWeight: 600 }}>+{selectedPayslip.primes.toLocaleString()} GNF</span>
+                  <span>+{selectedPayslip.primes.toLocaleString()} GNF</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: t.red }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#dc2626" }}>
                   <span>Retenues de Paie (Absences/Charges):</span>
-                  <span style={{ fontWeight: 600 }}>-{selectedPayslip.retenues.toLocaleString()} GNF</span>
+                  <span>-{selectedPayslip.retenues.toLocaleString()} GNF</span>
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, color: t.blue, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 800, color: "#1e3a8a", marginBottom: 20 }}>
                 <span>NET PERÇU GLOBAL :</span>
                 <span>{(selectedPayslip.salaire + selectedPayslip.primes - selectedPayslip.retenues).toLocaleString()} GNF</span>
               </div>
 
               {/* FOOTER */}
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setSelectedPayslip(null)} style={{ ...modalCancelBtnStyle }}>Fermer</button>
-                <button onClick={() => { alert("Impression simulée déclenchée !"); setSelectedPayslip(null); }} style={{ ...modalConfirmBtnStyle, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><i className="ti ti-printer" style={{ fontSize: 14 }} /> Imprimer Bulletin</button>
+                <button onClick={() => setSelectedPayslip(null)} style={{ flex: 1, padding: 10, border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#64748b", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Fermer</button>
+                <button onClick={() => { alert("Impression simulée déclenchée !"); setSelectedPayslip(null); }} style={{ flex: 1, padding: 10, border: "none", borderRadius: 8, background: "#1e3a8a", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><i className="ti ti-printer" style={{ fontSize: 20 }} /> Imprimer Bulletin</button>
               </div>
             </motion.div>
           </div>
@@ -1677,38 +1524,36 @@ export default function RH() {
       {/* 6. ADD LEAVE REQUEST MODAL */}
       <AnimatePresence>
         {showAddLeaveModal && (
-          <div className="modal-overlay" onClick={() => setShowAddLeaveModal(false)} style={{ ...overlayStyle, zIndex: 300 }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, width: "min(440px,94vw)" }}>
-              <div style={{ ...modalHeaderStyle }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <i className="ti ti-plane-departure" style={{ fontSize: 19, color: t.blue }} />
+          <div className="modal-overlay" onClick={() => setShowAddLeaveModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 420, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
+              <div style={{ background: "#ea580c", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className="ti ti-plane-departure" style={{ fontSize: 26, color: "#fff" }} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: t.text }}>Enregistrer un congé</h2>
-                    <span style={{ fontSize: 11.5, color: t.muted, fontWeight: 500 }}>Caisse &amp; Ressources Humaines</span>
+                    <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>Enregistrer un congé</h2>
+                    <span style={{ fontSize: 14, color: "#ffedd5", fontWeight: 600 }}>Caisse &amp; Ressources Humaines</span>
                   </div>
                 </div>
-                <button className="modal-close" onClick={() => setShowAddLeaveModal(false)} style={{ ...modalCloseStyle }}>
-                  <i className="ti ti-x" />
-                </button>
+                <button className="modal-close" onClick={() => setShowAddLeaveModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
               </div>
 
-              <div className="modal-body" style={{ padding: "20px 22px 24px" }}>
-                <div style={{ display: "grid", gap: 12 }}>
+              <div className="modal-body" style={{ padding: "24px" }}>
+                <div style={{ display: "grid", gap: 14 }}>
                   <div>
-                    <label style={{ ...labelStyle }}>Employé concerné *</label>
-                    <select value={newLeaveForm.employeId} onChange={e => { setNewLeaveForm({ ...newLeaveForm, employeId: e.target.value }); setRhErrors(ev=>({...ev, leaveEmp: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.leaveEmp), cursor: "pointer" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Employé concerné *</label>
+                    <select value={newLeaveForm.employeId} onChange={e => { setNewLeaveForm({ ...newLeaveForm, employeId: e.target.value }); setRhErrors(ev=>({...ev, leaveEmp: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.leaveEmp ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="">Sélectionnez un collaborateur</option>
                       {employes.map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.nom} — {emp.poste}</option>
                       ))}
                     </select>
-                    {rhErrors.leaveEmp && <p style={{ ...errorTextStyle }}>{rhErrors.leaveEmp}</p>}
+                    {rhErrors.leaveEmp && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveEmp}</p>}
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Type de congé</label>
-                    <select value={newLeaveForm.type} onChange={e => setNewLeaveForm({ ...newLeaveForm, type: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Type de congé</label>
+                    <select value={newLeaveForm.type} onChange={e => setNewLeaveForm({ ...newLeaveForm, type: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="Congé Annuel">Congé Annuel</option>
                       <option value="Maladie">Maladie</option>
                       <option value="Maternité">Maternité</option>
@@ -1717,26 +1562,26 @@ export default function RH() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
-                      <label style={{ ...labelStyle }}>Date Début *</label>
-                      <input type="date" value={newLeaveForm.debut} onChange={e => { setNewLeaveForm({ ...newLeaveForm, debut: e.target.value }); setRhErrors(ev=>({...ev, leaveDebut: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.leaveDebut) }} />
-                      {rhErrors.leaveDebut && <p style={{ ...errorTextStyle }}>{rhErrors.leaveDebut}</p>}
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Début *</label>
+                      <input type="date" value={newLeaveForm.debut} onChange={e => { setNewLeaveForm({ ...newLeaveForm, debut: e.target.value }); setRhErrors(ev=>({...ev, leaveDebut: undefined})); }} style={{ width: "100%", padding: "9px", border: `1px solid ${rhErrors.leaveDebut ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.leaveDebut && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveDebut}</p>}
                     </div>
                     <div>
-                      <label style={{ ...labelStyle }}>Date Fin *</label>
-                      <input type="date" value={newLeaveForm.fin} onChange={e => { setNewLeaveForm({ ...newLeaveForm, fin: e.target.value }); setRhErrors(ev=>({...ev, leaveFin: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.leaveFin) }} />
-                      {rhErrors.leaveFin && <p style={{ ...errorTextStyle }}>{rhErrors.leaveFin}</p>}
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Date Fin *</label>
+                      <input type="date" value={newLeaveForm.fin} onChange={e => { setNewLeaveForm({ ...newLeaveForm, fin: e.target.value }); setRhErrors(ev=>({...ev, leaveFin: undefined})); }} style={{ width: "100%", padding: "9px", border: `1px solid ${rhErrors.leaveFin ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.leaveFin && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveFin}</p>}
                     </div>
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Nombre de jours ouvrés *</label>
-                    <input type="number" placeholder="Ex: 5" value={newLeaveForm.jours} onChange={e => { setNewLeaveForm({ ...newLeaveForm, jours: e.target.value }); setRhErrors(ev=>({...ev, leaveJours: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.leaveJours) }} />
-                    {rhErrors.leaveJours && <p style={{ ...errorTextStyle }}>{rhErrors.leaveJours}</p>}
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nombre de jours ouvrés *</label>
+                    <input type="number" placeholder="Ex: 5" value={newLeaveForm.jours} onChange={e => { setNewLeaveForm({ ...newLeaveForm, jours: e.target.value }); setRhErrors(ev=>({...ev, leaveJours: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.leaveJours ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.leaveJours && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.leaveJours}</p>}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-                  <button onClick={() => setShowAddLeaveModal(false)} style={{ ...modalCancelBtnStyle }}>Annuler</button>
-                  <button onClick={handleAddLeave} style={{ ...modalConfirmBtnStyle }}>Soumettre</button>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setShowAddLeaveModal(false)} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+                  <button onClick={handleAddLeave} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#ea580c", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>Soumettre</button>
                 </div>
               </div>
             </motion.div>
@@ -1747,42 +1592,40 @@ export default function RH() {
       {/* 7. ADD EMPLOYEE MODAL */}
       <AnimatePresence>
         {showAddStaffModal && (
-          <div className="modal-overlay" onClick={() => setShowAddStaffModal(false)} style={{ ...overlayStyle, zIndex: 300 }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, width: "min(480px,94vw)" }}>
+          <div className="modal-overlay" onClick={() => setShowAddStaffModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 460, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
               {/* TOP HEADER */}
-              <div style={{ ...modalHeaderStyle }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <i className={`ti ${newStaffForm.id ? "ti-pencil" : "ti-user-plus"}`} style={{ fontSize: 19, color: t.blue }} />
+              <div style={{ background: "#1e3a8a", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className={`ti ${newStaffForm.id ? "ti-pencil" : "ti-user-plus"}`} style={{ fontSize: 26, color: "#fff" }} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: t.text }}>
+                    <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
                       {newStaffForm.id ? "Modifier le Collaborateur" : "Ajouter un Collaborateur"}
                     </h2>
-                    <span style={{ fontSize: 11.5, color: t.muted, fontWeight: 500 }}>Caisse &amp; Ressources Humaines</span>
+                    <span style={{ fontSize: 14, color: "#dbeafe", fontWeight: 600 }}>Caisse &amp; Ressources Humaines</span>
                   </div>
                 </div>
-                <button className="modal-close" onClick={() => setShowAddStaffModal(false)} style={{ ...modalCloseStyle }}>
-                  <i className="ti ti-x" />
-                </button>
+                <button className="modal-close" onClick={() => setShowAddStaffModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
               </div>
 
               {/* BODY FORM */}
-              <div className="modal-body" style={{ padding: "20px 22px 24px", maxHeight: "72vh", overflowY: "auto" }}>
-                <div style={{ display: "grid", gap: 12 }}>
+              <div className="modal-body" style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+                <div style={{ display: "grid", gap: 14 }}>
                   <div>
-                    <label style={{ ...labelStyle }}>Nom complet *</label>
-                    <input type="text" placeholder="Ex: Jean Martin" value={newStaffForm.nom} onChange={e => { setNewStaffForm({ ...newStaffForm, nom: e.target.value }); setRhErrors(ev=>({...ev, nom: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.nom) }} />
-                    {rhErrors.nom && <p style={{ ...errorTextStyle }}>{rhErrors.nom}</p>}
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet *</label>
+                    <input type="text" placeholder="Ex: Jean Martin" value={newStaffForm.nom} onChange={e => { setNewStaffForm({ ...newStaffForm, nom: e.target.value }); setRhErrors(ev=>({...ev, nom: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.nom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.nom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.nom}</p>}
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Poste / Discipline d'enseignement *</label>
-                    <input type="text" placeholder="Ex: Professeur de Mathématiques ou Cuisinier" value={newStaffForm.poste} onChange={e => { setNewStaffForm({ ...newStaffForm, poste: e.target.value }); setRhErrors(ev=>({...ev, poste: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.poste) }} />
-                    {rhErrors.poste && <p style={{ ...errorTextStyle }}>{rhErrors.poste}</p>}
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Poste / Discipline d'enseignement *</label>
+                    <input type="text" placeholder="Ex: Professeur de Mathématiques ou Cuisinier" value={newStaffForm.poste} onChange={e => { setNewStaffForm({ ...newStaffForm, poste: e.target.value }); setRhErrors(ev=>({...ev, poste: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.poste ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.poste && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.poste}</p>}
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Catégorie de rôle *</label>
-                    <select value={newStaffForm.categorie} onChange={e => setNewStaffForm({ ...newStaffForm, categorie: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Catégorie de rôle *</label>
+                    <select value={newStaffForm.categorie} onChange={e => setNewStaffForm({ ...newStaffForm, categorie: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="Enseignant">Enseignant</option>
                       <option value="Administration">Administration (Direction, Comptable, Secrétaire, etc.)</option>
                       <option value="Services &amp; Soutien">Services &amp; Soutien (Chauffeur, Sécurité, Entretien, Cuisine, Santé)</option>
@@ -1790,37 +1633,37 @@ export default function RH() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
-                      <label style={{ ...labelStyle }}>Type de contrat</label>
-                      <select value={newStaffForm.contrat} onChange={e => setNewStaffForm({ ...newStaffForm, contrat: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Type de contrat</label>
+                      <select value={newStaffForm.contrat} onChange={e => setNewStaffForm({ ...newStaffForm, contrat: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
                         <option value="CDI">CDI</option>
                         <option value="CDD">CDD</option>
                         <option value="Temps partiel">Temps partiel</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ ...labelStyle }}>Salaire mensuel (GNF) *</label>
-                      <input type="number" placeholder="Ex: 2000000" value={newStaffForm.salaire} onChange={e => { setNewStaffForm({ ...newStaffForm, salaire: e.target.value }); setRhErrors(ev=>({...ev, salaire: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.salaire) }} />
-                      {rhErrors.salaire && <p style={{ ...errorTextStyle }}>{rhErrors.salaire}</p>}
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Salaire mensuel (GNF) *</label>
+                      <input type="number" placeholder="Ex: 2000000" value={newStaffForm.salaire} onChange={e => { setNewStaffForm({ ...newStaffForm, salaire: e.target.value }); setRhErrors(ev=>({...ev, salaire: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.salaire ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.salaire && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.salaire}</p>}
                     </div>
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Dernier Diplôme obtenu</label>
-                    <input type="text" placeholder="Ex: Master en Administration" value={newStaffForm.diplome} onChange={e => setNewStaffForm({ ...newStaffForm, diplome: e.target.value })} style={{ ...inputStyle }} />
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Dernier Diplôme obtenu</label>
+                    <input type="text" placeholder="Ex: Master en Administration" value={newStaffForm.diplome} onChange={e => setNewStaffForm({ ...newStaffForm, diplome: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
-                      <label style={{ ...labelStyle }}>Téléphone</label>
-                      <input type="text" placeholder="Ex: +224 620..." value={newStaffForm.telephone} onChange={e => setNewStaffForm({ ...newStaffForm, telephone: e.target.value })} style={{ ...inputStyle }} />
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Téléphone</label>
+                      <input type="text" placeholder="Ex: +224 620..." value={newStaffForm.telephone} onChange={e => setNewStaffForm({ ...newStaffForm, telephone: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                     </div>
                     <div>
-                      <label style={{ ...labelStyle }}>E-mail</label>
-                      <input type="email" placeholder="Ex: j.martin@schoolx.gn" value={newStaffForm.email} onChange={e => { setNewStaffForm({ ...newStaffForm, email: e.target.value }); setRhErrors(ev=>({...ev, email: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.email) }} />
-                      {rhErrors.email && <p style={{ ...errorTextStyle }}>{rhErrors.email}</p>}
+                      <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>E-mail</label>
+                      <input type="email" placeholder="Ex: j.martin@schoolx.gn" value={newStaffForm.email} onChange={e => { setNewStaffForm({ ...newStaffForm, email: e.target.value }); setRhErrors(ev=>({...ev, email: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.email ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                      {rhErrors.email && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.email}</p>}
                     </div>
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Avatar de rôle (géré automatiquement)</label>
-                    <select value={newStaffForm.avatar} onChange={e => setNewStaffForm({ ...newStaffForm, avatar: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Avatar de rôle (géré automatiquement)</label>
+                    <select value={newStaffForm.avatar} onChange={e => setNewStaffForm({ ...newStaffForm, avatar: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="👨‍🏫">Enseignant (Homme)</option>
                       <option value="👩‍🏫">Enseignante (Femme)</option>
                       <option value="👨‍💼">Cadre (Homme)</option>
@@ -1830,14 +1673,14 @@ export default function RH() {
                     </select>
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Emploi du temps (Séparez par des points-virgules ';')</label>
-                    <input type="text" placeholder="Ex: Lundi (08h - 12h); Mercredi (10h - 14h)" value={newStaffForm.emploiDuTemps} onChange={e => setNewStaffForm({ ...newStaffForm, emploiDuTemps: e.target.value })} style={{ ...inputStyle }} />
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Emploi du temps (Séparez par des points-virgules ';')</label>
+                    <input type="text" placeholder="Ex: Lundi (08h - 12h); Mercredi (10h - 14h)" value={newStaffForm.emploiDuTemps} onChange={e => setNewStaffForm({ ...newStaffForm, emploiDuTemps: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-                  <button onClick={() => setShowAddStaffModal(false)} style={{ ...modalCancelBtnStyle }}>Annuler</button>
-                  <button onClick={handleAddEmployee} style={{ ...modalConfirmBtnStyle }}>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setShowAddStaffModal(false)} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+                  <button onClick={handleAddEmployee} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#1e3a8a", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
                     {newStaffForm.id ? "Mettre à jour" : "Enregistrer"}
                   </button>
                 </div>
@@ -1850,62 +1693,60 @@ export default function RH() {
       {/* 8. ADD CANDIDATE MODAL */}
       <AnimatePresence>
         {showAddCandidateModal && (
-          <div className="modal-overlay" onClick={() => setShowAddCandidateModal(false)} style={{ ...overlayStyle, zIndex: 300 }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, width: "min(440px,94vw)" }}>
+          <div className="modal-overlay" onClick={() => setShowAddCandidateModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-content" onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: 440, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
               {/* TOP HEADER */}
-              <div style={{ ...modalHeaderStyle }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <i className="ti ti-user-plus" style={{ fontSize: 19, color: t.blue }} />
+              <div style={{ background: "#8b5cf6", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className="ti ti-user-plus" style={{ fontSize: 26, color: "#fff" }} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: t.text }}>Nouveau Candidat</h2>
-                    <span style={{ fontSize: 11.5, color: t.muted, fontWeight: 500 }}>Caisse &amp; Ressources Humaines</span>
+                    <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Nouveau Candidat</h2>
+                    <span style={{ fontSize: 14, color: "#f3e8ff", fontWeight: 600 }}>Caisse &amp; Ressources Humaines</span>
                   </div>
                 </div>
-                <button className="modal-close" onClick={() => setShowAddCandidateModal(false)} style={{ ...modalCloseStyle }}>
-                  <i className="ti ti-x" />
-                </button>
+                <button className="modal-close" onClick={() => setShowAddCandidateModal(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>✕</button>
               </div>
 
               {/* BODY FORM */}
-              <div className="modal-body" style={{ padding: "20px 22px 24px", maxHeight: "72vh", overflowY: "auto" }}>
-                <div style={{ display: "grid", gap: 12 }}>
+              <div className="modal-body" style={{ padding: "24px", maxHeight: "65vh", overflowY: "auto" }}>
+                <div style={{ display: "grid", gap: 14 }}>
                   <div>
-                    <label style={{ ...labelStyle }}>Nom complet du Candidat *</label>
-                    <input type="text" placeholder="Ex: Marc Dubois" value={newCandidateForm.nom} onChange={e => { setNewCandidateForm({ ...newCandidateForm, nom: e.target.value }); setRhErrors(ev=>({...ev, candNom: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.candNom) }} />
-                    {rhErrors.candNom && <p style={{ ...errorTextStyle }}>{rhErrors.candNom}</p>}
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom complet du Candidat *</label>
+                    <input type="text" placeholder="Ex: Marc Dubois" value={newCandidateForm.nom} onChange={e => { setNewCandidateForm({ ...newCandidateForm, nom: e.target.value }); setRhErrors(ev=>({...ev, candNom: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.candNom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.candNom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.candNom}</p>}
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Poste ciblé *</label>
-                    <input type="text" placeholder="Ex: Professeur de Chimie ou Cuisinier" value={newCandidateForm.poste} onChange={e => { setNewCandidateForm({ ...newCandidateForm, poste: e.target.value }); setRhErrors(ev=>({...ev, candPoste: undefined})); }} style={{ ...inputStyle, border: fieldBorder(rhErrors.candPoste) }} />
-                    {rhErrors.candPoste && <p style={{ ...errorTextStyle }}>{rhErrors.candPoste}</p>}
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Poste ciblé *</label>
+                    <input type="text" placeholder="Ex: Professeur de Chimie ou Cuisinier" value={newCandidateForm.poste} onChange={e => { setNewCandidateForm({ ...newCandidateForm, poste: e.target.value }); setRhErrors(ev=>({...ev, candPoste: undefined})); }} style={{ width: "100%", padding: "10px", border: `1px solid ${rhErrors.candPoste ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16 }} />
+                    {rhErrors.candPoste && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{rhErrors.candPoste}</p>}
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Catégorie de rôle *</label>
-                    <select value={newCandidateForm.categorie} onChange={e => setNewCandidateForm({ ...newCandidateForm, categorie: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Catégorie de rôle *</label>
+                    <select value={newCandidateForm.categorie} onChange={e => setNewCandidateForm({ ...newCandidateForm, categorie: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }}>
                       <option value="Enseignant">Enseignant</option>
                       <option value="Administration">Administration (Direction, Comptable, Secrétaire, etc.)</option>
                       <option value="Services &amp; Soutien">Services &amp; Soutien (Chauffeur, Secrétaire, Entretien, Cuisine, Santé)</option>
                     </select>
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Dernier Diplôme &amp; Titres</label>
-                    <input type="text" placeholder="Ex: Doctorat en Chimie Appliquée" value={newCandidateForm.diplome} onChange={e => setNewCandidateForm({ ...newCandidateForm, diplome: e.target.value })} style={{ ...inputStyle }} />
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Dernier Diplôme &amp; Titres</label>
+                    <input type="text" placeholder="Ex: Doctorat en Chimie Appliquée" value={newCandidateForm.diplome} onChange={e => setNewCandidateForm({ ...newCandidateForm, diplome: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Adresse E-mail</label>
-                    <input type="email" placeholder="Ex: m.dubois@gmail.com" value={newCandidateForm.email} onChange={e => setNewCandidateForm({ ...newCandidateForm, email: e.target.value })} style={{ ...inputStyle }} />
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Adresse E-mail</label>
+                    <input type="email" placeholder="Ex: m.dubois@gmail.com" value={newCandidateForm.email} onChange={e => setNewCandidateForm({ ...newCandidateForm, email: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                   </div>
                   <div>
-                    <label style={{ ...labelStyle }}>Téléphone Direct</label>
-                    <input type="text" placeholder="Ex: +224 624..." value={newCandidateForm.tel} onChange={e => setNewCandidateForm({ ...newCandidateForm, tel: e.target.value })} style={{ ...inputStyle }} />
+                    <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Téléphone Direct</label>
+                    <input type="text" placeholder="Ex: +224 624..." value={newCandidateForm.tel} onChange={e => setNewCandidateForm({ ...newCandidateForm, tel: e.target.value })} style={{ width: "100%", padding: "10px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 16 }} />
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-                  <button onClick={() => setShowAddCandidateModal(false)} style={{ ...modalCancelBtnStyle }}>Annuler</button>
-                  <button onClick={handleAddCandidate} style={{ ...modalConfirmBtnStyle }}>Ajouter au Pipeline</button>
+                <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                  <button onClick={() => setShowAddCandidateModal(false)} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+                  <button onClick={handleAddCandidate} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#8b5cf6", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>Ajouter au Pipeline</button>
                 </div>
               </div>
             </motion.div>

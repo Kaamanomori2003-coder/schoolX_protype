@@ -1,11 +1,19 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./Notes.css";
-import { MATIERES, MAT_ABR, COEFFS as INITIAL_COEFFS, INITIAL_NOTES, noteColor, statutInfo, EVO } from "./notesData";
+import { MATIERES, MAT_ABR, MAT_CLR, COEFFS as INITIAL_COEFFS, INITIAL_NOTES, avatarColor, noteColor, statutInfo, EVO } from "./notesData";
 import { CLASSES, STUDENTS, getNomComplet, getInitials } from "./studentsData";
 import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../context/ToastContext";
-import { t, chartColors } from "../theme";
+import {
+  Target,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
+  AlertCircle
+} from "lucide-react";
+
 
 function useOutsideClick(ref, cb) {
   useEffect(() => {
@@ -15,71 +23,31 @@ function useOutsideClick(ref, cb) {
   }, [ref, cb]);
 }
 
-/* ─── PRIMITIVES ─────────────────────────────────────────────── */
-const Chip = ({ label, c, bg }) => (
-  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: bg, color: c, whiteSpace: "nowrap", display: "inline-block" }}>
-    {label}
-  </span>
-);
-
-const ModalShell = ({ onClose, zIndex, width, children }) => (
-  <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center", zIndex }}>
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-      onClick={e => e.stopPropagation()}
-      style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, width, maxWidth: "94vw", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", fontFamily: t.font, color: t.text }}
-    >
-      {children}
-    </motion.div>
-  </div>
-);
-
-const ModalHead = ({ icon, initials, title, subtitle, onClose, children }) => (
-  <div style={{ padding: "18px 22px", borderBottom: `1px solid ${t.border}` }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
-        <div style={{ width: 42, height: 42, borderRadius: "50%", background: t.blueSoft, border: `1px solid ${t.blueMid}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 700, color: t.blue }}>
-          {initials || <i className={`ti ${icon}`} style={{ fontSize: 17 }} />}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: t.text }}>{title}</h2>
-          <div style={{ fontSize: 11.5, color: t.muted, marginTop: 2 }}>{subtitle}</div>
-        </div>
-      </div>
-      <button onClick={onClose} style={{ background: t.bg, border: "none", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: t.sub, flexShrink: 0 }}>
-        <i className="ti ti-x" style={{ fontSize: 15 }} />
-      </button>
+function CircleProgress({ pct, color, label }) {
+  return (
+    <div className="circle-wrap">
+      <svg viewBox="0 0 36 36" width="48" height="48">
+        <path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+        <path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${pct}, 100`} />
+      </svg>
+      <div className="circle-label" style={{ color, fontWeight: 700, fontSize: 13 }}>{label}</div>
     </div>
-    {children}
-  </div>
-);
+  );
+}
 
-const CancelBtn = ({ label, onClick }) => (
-  <button onClick={onClick} style={{ flex: 1, padding: "10px", border: `1px solid ${t.border}`, borderRadius: t.radius, background: t.surface, fontSize: 12.5, fontWeight: 500, cursor: "pointer", color: t.sub, fontFamily: t.font }}>
-    {label}
-  </button>
-);
-
-const ActionBtn = ({ icon, label, primary, c, bg, border, onClick }) => (
-  <button onClick={onClick} style={{
-    display: "flex", alignItems: "center", gap: 7,
-    padding: "9px 16px", border: primary ? "none" : `1px solid ${border || t.border}`,
-    borderRadius: t.radius, cursor: "pointer",
-    fontFamily: t.font, fontSize: 12.5, fontWeight: 500,
-    background: primary ? t.blue : (bg || t.surface),
-    color: primary ? "#fff" : (c || t.sub),
-    boxShadow: primary ? "0 2px 8px rgba(37,99,235,0.25)" : t.shadow,
-    transition: "all .15s",
-  }}>
-    <i className={`ti ${icon}`} style={{ fontSize: 14 }} /> {label}
-  </button>
-);
-
-const SubmitBtn = ({ icon, label, onClick, bg = t.blue, c = "#fff", border = "none" }) => (
-  <button onClick={onClick} style={{ flex: 1, padding: "10px", border, borderRadius: t.radius, background: bg, color: c, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-    <i className={`ti ${icon}`} style={{ fontSize: 15 }} /> {label}
-  </button>
-);
+function ContextMenu({ eleve, onClose, onView, onEdit, onEditInfo, onPrint }) {
+  const ref = useRef();
+  useOutsideClick(ref, onClose);
+  return (
+    <div ref={ref} className="ctx-menu">
+      <button onClick={() => { onView(eleve); onClose(); }}><i className="ti ti-eye"></i> Voir le bulletin</button>
+      <button onClick={() => { onPrint(eleve); onClose(); }}><i className="ti ti-printer"></i> Imprimer</button>
+      <button onClick={() => { onEdit(eleve); onClose(); }}><i className="ti ti-pencil"></i> Saisir les notes</button>
+      <button onClick={() => { onEditInfo(eleve); onClose(); }}><i className="ti ti-user-cog"></i> Modifier l'élève</button>
+      <hr />
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────
    MODAL COEFFICIENTS
@@ -90,39 +58,56 @@ function CoeffModal({ coeffs, setCoeffs, onClose, showToast }) {
   const handleSave = () => { setCoeffs(localCoeffs); onClose(); showToast("Coefficients mis à jour", "success", "Les moyennes ont été recalculées automatiquement."); };
 
   return (
-    <ModalShell onClose={onClose} zIndex={300} width={460}>
-      <ModalHead icon="ti-settings" title="Coefficients" subtitle="Gestion des matières" onClose={onClose} />
-
-      <div style={{ padding: "20px 22px", maxHeight: "72vh", overflowY: "auto" }}>
-        <p style={{ fontSize: 13, color: t.sub, marginBottom: 16, marginTop: 0, lineHeight: 1.5 }}>
-          Ajustez les coefficients pour chaque matière. Cela recalculera automatiquement toutes les moyennes.
-        </p>
-        <div style={{ display: "grid", gap: 8 }}>
-          {MATIERES.map(mat => (
-            <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: t.bg, border: `1px solid ${t.border}`, padding: "9px 14px", borderRadius: t.radius }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{mat}</div>
-              <input
-                type="number" min="1" max="10" step="1"
-                value={localCoeffs[mat] || 1}
-                onChange={e => {
-                  let val = parseInt(e.target.value);
-                  if (isNaN(val) || val < 1) val = 1;
-                  if (val > 10) val = 10;
-                  setLocalCoeffs(prev => ({ ...prev, [mat]: val }));
-                }}
-                style={{ width: 62, padding: "7px 10px", border: `1px solid ${t.border}`, borderRadius: t.radius, outline: "none", fontWeight: 700, color: t.text, textAlign: "center", fontSize: 13, fontFamily: t.font, background: t.surface }}
-                onFocus={e => e.currentTarget.style.borderColor = t.blue}
-                onBlur={e => e.currentTarget.style.borderColor = t.border}
-              />
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 460, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <i className="ti ti-settings" style={{ fontSize: 28, color: "#fff" }} />
             </div>
-          ))}
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Coefficients</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Gestion des matières</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <CancelBtn label="Annuler" onClick={onClose} />
-          <SubmitBtn icon="ti-device-floppy" label="Appliquer" onClick={handleSave} />
+
+        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
+          <p style={{ fontSize: 15, color: "#64748b", marginBottom: 20, marginTop: 0 }}>
+            Ajustez les coefficients pour chaque matière. Cela recalculera automatiquement toutes les moyennes.
+          </p>
+          <div style={{ display: "grid", gap: 12 }}>
+            {MATIERES.map(mat => (
+              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#334155" }}>{mat}</div>
+                <input
+                  type="number" min="1" max="10" step="1"
+                  value={localCoeffs[mat] || 1}
+                  onChange={e => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val) || val < 1) val = 1;
+                    if (val > 10) val = 10;
+                    setLocalCoeffs(prev => ({ ...prev, [mat]: val }));
+                  }}
+                  style={{ width: 64, padding: "6px 10px", border: "2px solid #e2e8f0", borderRadius: 8, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center", fontSize: 16 }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} /> Appliquer
+            </button>
+          </div>
         </div>
-      </div>
-    </ModalShell>
+      </motion.div>
+    </div>
   );
 }
 
@@ -151,51 +136,62 @@ function EditModal({ eleve, trimestre, notesData, setNotesData, coeffs, onClose,
   const m = getMoy(localNotes);
 
   return (
-    <ModalShell onClose={onClose} zIndex={1100} width={500}>
-      <ModalHead
-        initials={getInitials(eleve)}
-        title={getNomComplet(eleve)}
-        subtitle={`Saisie des notes — ${trimestre}`}
-        onClose={onClose}
-      />
-
-      <div style={{ padding: "20px 22px", maxHeight: "72vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, background: t.bg, padding: "12px 16px", borderRadius: t.radius, border: `1px solid ${t.border}` }}>
-          <span style={{ fontWeight: 600, color: t.sub, fontSize: 13 }}>Moyenne simulée :</span>
-          <span style={{ fontWeight: 700, color: noteColor(m), fontSize: 19 }}>{m} <span style={{ fontSize: 11.5, color: t.muted }}>/ 20</span></span>
-        </div>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          {MATIERES.map(mat => (
-            <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: t.bg, border: `1px solid ${t.border}`, padding: "9px 14px", borderRadius: t.radius }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{mat}</div>
-                <div style={{ fontSize: 11, color: t.muted, marginTop: 1 }}>Coeff : {coeffs[mat]}</div>
-              </div>
-              <input
-                type="number" min="0" max="20" step="0.25"
-                value={localNotes[mat] || ""}
-                onChange={e => {
-                  let val = parseFloat(e.target.value);
-                  if (isNaN(val)) val = 0;
-                  if (val < 0) val = 0;
-                  if (val > 20) val = 20;
-                  setLocalNotes(prev => ({ ...prev, [mat]: val }));
-                }}
-                style={{ width: 70, padding: "7px 10px", border: `1px solid ${t.border}`, borderRadius: t.radius, outline: "none", fontWeight: 700, color: t.text, textAlign: "center", fontSize: 13, fontFamily: t.font, background: t.surface }}
-                onFocus={e => e.currentTarget.style.borderColor = t.blue}
-                onBlur={e => e.currentTarget.style.borderColor = t.border}
-              />
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 500, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: 20, color: "#fff" }}>
+              {getInitials(eleve)}
             </div>
-          ))}
+            <div>
+              <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{getNomComplet(eleve)}</h2>              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>Saisie des notes — {trimestre}</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <CancelBtn label="Annuler" onClick={onClose} />
-          <SubmitBtn icon="ti-device-floppy" label="Enregistrer" onClick={handleSave} />
+        <div style={{ padding: "24px", maxHeight: "72vh", overflowY: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, background: "#f8fafc", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <span style={{ fontWeight: 600, color: "#64748b", fontSize: 15 }}>Moyenne simulée :</span>
+            <span style={{ fontWeight: 800, color: noteColor(m), fontSize: 22 }}>{m} <span style={{ fontSize: 15, color: "#94a3b8" }}>/ 20</span></span>
+          </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            {MATIERES.map(mat => (
+              <div key={mat} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 10 }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#334155" }}>{mat}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8" }}>Coeff : {coeffs[mat]}</div>
+                </div>
+                <input
+                  type="number" min="0" max="20" step="0.25"
+                  value={localNotes[mat] || ""}
+                  onChange={e => {
+                    let val = parseFloat(e.target.value);
+                    if (isNaN(val)) val = 0;
+                    if (val < 0) val = 0;
+                    if (val > 20) val = 20;
+                    setLocalNotes(prev => ({ ...prev, [mat]: val }));
+                  }}
+                  style={{ width: 72, padding: "7px 10px", border: "2px solid #e2e8f0", borderRadius: 8, outline: "none", fontWeight: 700, color: "#0f172a", textAlign: "center", fontSize: 16 }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} /> Enregistrer
+            </button>
+          </div>
         </div>
-      </div>
-    </ModalShell>
+      </motion.div>
+    </div>
   );
 }
 
@@ -239,89 +235,91 @@ function StudentModal({ onClose, onSave, classes, trimestre, initialStudent }) {
     onClose();
   };
 
-  const inputStyle = (invalid) => ({
-    width: "100%", padding: "9px 12px",
-    border: `1px solid ${invalid ? t.red : t.border}`, borderRadius: t.radius,
-    outline: "none", fontSize: 13, boxSizing: "border-box",
-    fontFamily: t.font, color: t.text, background: t.surface,
-  });
-
   return (
-    <ModalShell onClose={onClose} zIndex={1200} width={480}>
-      <ModalHead
-        icon={isEdit ? "ti-user-cog" : "ti-user-plus"}
-        title={isEdit ? "Modifier l'élève" : "Ajouter un élève"}
-        subtitle={isEdit ? "Informations personnelles" : "Informations & notes initiales"}
-        onClose={onClose}
-      />
-
-      <div style={{ padding: "20px 22px", maxHeight: "72vh", overflowY: "auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 11, color: t.sub }}>Prénom *</label>
-            <input type="text" placeholder="Ex: Jean" value={prenom} onChange={e => { setPrenom(e.target.value); setErrors(ev => ({ ...ev, prenom: undefined })); }}
-              style={inputStyle(errors.prenom)}
-              onFocus={e => e.currentTarget.style.borderColor = errors.prenom ? t.red : t.blue}
-              onBlur={e => e.currentTarget.style.borderColor = errors.prenom ? t.red : t.border}
-            />
-            {errors.prenom && <p style={{ color: t.red, fontSize: 11, marginTop: 3 }}>{errors.prenom}</p>}
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 11, color: t.sub }}>Nom *</label>
-            <input type="text" placeholder="Ex: Dupont" value={nom} onChange={e => { setNom(e.target.value); setErrors(ev => ({ ...ev, nom: undefined })); }}
-              style={inputStyle(errors.nom)}
-              onFocus={e => e.currentTarget.style.borderColor = errors.nom ? t.red : t.blue}
-              onBlur={e => e.currentTarget.style.borderColor = errors.nom ? t.red : t.border}
-            />
-            {errors.nom && <p style={{ color: t.red, fontSize: 11, marginTop: 3 }}>{errors.nom}</p>}
-          </div>
-        </div>
-
-        {!isEdit && (
-          <>
-            <hr style={{ border: "0", borderTop: `1px solid ${t.border}`, margin: "18px 0" }} />
-            <h3 style={{ fontSize: 15, marginBottom: 12, color: t.text, fontWeight: 700, marginTop: 0, display: "flex", alignItems: "center", gap: 8 }}>
-              <i className="ti ti-clipboard-list" style={{ color: t.blue, fontSize: 16 }} />
-              Notes initiales ({trimestre})
-            </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {MATIERES.map(mat => (
-                <div key={mat}>
-                  <label style={{ display: "block", marginBottom: 5, fontSize: 11, fontWeight: 600, color: t.sub }}>{mat}</label>
-                  <input
-                    type="number" min="0" max="20" step="0.25" placeholder="Note /20" value={notes[mat]}
-                    onChange={e => {
-                      let val = parseFloat(e.target.value);
-                      if (isNaN(val)) val = "";
-                      if (val < 0) val = 0;
-                      if (val > 20) val = 20;
-                      setNotes(prev => ({ ...prev, [mat]: val }));
-                    }}
-                    style={inputStyle(false)}
-                    onFocus={e => e.currentTarget.style.borderColor = t.blue}
-                    onBlur={e => e.currentTarget.style.borderColor = t.border}
-                  />
-                </div>
-              ))}
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 480, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        <div style={{ background: "#0066CC", padding: "20px 24px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <i className={`ti ${isEdit ? "ti-user-cog" : "ti-user-plus"}`} style={{ fontSize: 28, color: "#fff" }} />
             </div>
-          </>
-        )}
-
-        <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-          <CancelBtn label="Annuler" onClick={onClose} />
-          <SubmitBtn icon="ti-device-floppy" label={isEdit ? "Enregistrer" : "Ajouter l'élève"} onClick={handleSubmit} />
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>{isEdit ? "Modifier l'élève" : "Ajouter un élève"}</h2>
+              <span style={{ fontSize: 14, color: "#e0f2fe", fontWeight: 600 }}>
+                {isEdit ? "Informations personnelles" : "Informations & Notes initiales"}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontSize: 16 }}>✕</button>
         </div>
-      </div>
-    </ModalShell>
+
+        <div style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Prénom *</label>
+              <input type="text" placeholder="Ex: Jean" value={prenom} onChange={e => { setPrenom(e.target.value); setErrors(ev => ({ ...ev, prenom: undefined })); }}
+                style={{ width: "100%", padding: "10px", border: `1px solid ${errors.prenom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }} />
+              {errors.prenom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{errors.prenom}</p>}
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 15, color: "#64748b" }}>Nom *</label>
+              <input type="text" placeholder="Ex: Dupont" value={nom} onChange={e => { setNom(e.target.value); setErrors(ev => ({ ...ev, nom: undefined })); }}
+                style={{ width: "100%", padding: "10px", border: `1px solid ${errors.nom ? "#dc2626" : "#e2e8f0"}`, borderRadius: 8, outline: "none", fontSize: 16, boxSizing: "border-box" }} />
+              {errors.nom && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{errors.nom}</p>}
+            </div>
+          </div>
+
+          {!isEdit && (
+            <>
+              <hr style={{ border: "0", borderTop: "1px solid #f1f5f9", margin: "20px 0" }} />
+              <h3 style={{ fontSize: 16, marginBottom: 14, color: "#475569", fontWeight: 700, marginTop: 0 }}>
+                <i className="ti ti-clipboard-list" style={{ marginRight: 8, color: "#8b5cf6", fontSize: 18, verticalAlign: "middle" }} />
+                Notes initiales ({trimestre})
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {MATIERES.map(mat => (
+                  <div key={mat}>
+                    <label style={{ display: "block", marginBottom: 4, fontSize: 14, fontWeight: 600, color: "#64748b" }}>{mat}</label>
+                    <input
+                      type="number" min="0" max="20" step="0.25" placeholder="Note /20" value={notes[mat]}
+                      onChange={e => {
+                        let val = parseFloat(e.target.value);
+                        if (isNaN(val)) val = "";
+                        if (val < 0) val = 0;
+                        if (val > 20) val = 20;
+                        setNotes(prev => ({ ...prev, [mat]: val }));
+                      }}
+                      style={{ width: "100%", padding: "9px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 15, boxSizing: "border-box" }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Annuler</button>
+            <button onClick={handleSubmit} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-device-floppy" style={{ fontSize: 20 }} />
+              {isEdit ? "Enregistrer" : "Ajouter l'élève"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
 /* ─────────────────────────────────────────────
    MODAL BULLETIN (Vue détaillée avec Tabs)
 ───────────────────────────────────────────── */
-function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour, onEdit, onEditInfo }) {
-  const [dossierTab, setDossierTab] = useState("resume");
+function Modal({ eleve, trimestre, notesData, coeffs, getMoyenne, onClose, onEdit }) {
   if (!eleve) return null;
+  const [dossierTab, setDossierTab] = useState("resume");
   const tNotes = notesData[eleve.id][trimestre];
   const m = getMoyenne(tNotes);
   const s = statutInfo(m);
@@ -329,11 +327,11 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
   const mx = Math.max(...vals), mn = Math.min(...vals);
   const mf = MATIERES.find(k => tNotes[k] === mx);
   const mw = MATIERES.find(k => tNotes[k] === mn);
-  const bg = m >= 14 ? t.green : m >= 10 ? t.blue : m >= 8 ? t.amber : t.red;
+  const bg = m >= 14 ? "#10b981" : m >= 10 ? "#3b82f6" : m >= 8 ? "#f59e0b" : "#ef4444";
 
   const handlePrint = () => {
     const w = window.open("", "_blank");
-    w.document.write(`<html><head><title>Bulletin - ${getNomComplet(eleve)}</title><style>body{font-family:sans-serif;padding:40px}h1{color:${t.text}}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid ${t.border};padding:10px;text-align:left}th{background:${t.bg}}tfoot td{font-weight:bold;background:${t.blueSoft}}</style></head><body>`);
+    w.document.write(`<html><head><title>Bulletin - ${getNomComplet(eleve)}</title><style>body{font-family:sans-serif;padding:40px}h1{color:#1e293b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #e2e8f0;padding:10px;text-align:left}th{background:#f8fafc}tfoot td{font-weight:bold;background:#eff6ff}</style></head><body>`);
     w.document.write(`<h1>Bulletin de notes - ${trimestre}</h1><p><strong>Élève :</strong> ${getNomComplet(eleve)}</p><p><strong>Classe :</strong> ${eleve.classe}</p><p><strong>Statut :</strong> ${s.l}</p>`);
     w.document.write(`<table><thead><tr><th>Matière</th><th>Coef.</th><th>Note /20</th></tr></thead><tbody>`);
     MATIERES.forEach(mat => { w.document.write(`<tr><td>${mat}</td><td>${coeffs[mat]}</td><td>${tNotes[mat]}</td>`); });
@@ -418,7 +416,7 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
       const colW = [70, 25, 25, tableW - 70 - 25 - 25];
       const rowH = 8;
 
-      doc.setFillColor(37, 99, 235);
+      doc.setFillColor(0, 102, 204);
       doc.rect(tableX, y, tableW, rowH, "F");
       doc.setTextColor(255);
       doc.setFont("helvetica", "bold");
@@ -450,7 +448,7 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
       doc.setFillColor(239, 246, 255);
       doc.rect(tableX, y, tableW, rowH, "F");
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(37, 99, 235);
+      doc.setTextColor(0, 102, 204);
       doc.text("Moyenne pondérée", tableX + 3, y + 5.5);
       doc.text(`${m}/20`, tableX + colW[0] + 3, y + 5.5);
       y += rowH;
@@ -462,7 +460,7 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
       // Point fort / à renforcer
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9.5);
-      doc.setTextColor(5, 150, 105);
+      doc.setTextColor(22, 163, 74);
       doc.text(`Point fort : ${mf} (${mx}/20)`, tableX, y);
       doc.setTextColor(220, 38, 38);
       doc.text(`À renforcer : ${mw} (${mn}/20)`, tableX + tableW / 2, y);
@@ -510,137 +508,124 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
     });
   };
   const thStyle = {
-    padding: "11px 16px",
+    padding: "14px",
     textAlign: "left",
-    fontSize: "11px",
-    fontWeight: 600,
-    color: t.muted,
-    textTransform: "uppercase",
-    letterSpacing: ".4px",
-    borderBottom: `1px solid ${t.border}`
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#475569",
+    borderBottom: "1px solid #e2e8f0"
   };
 
   const tdStyle = {
-    padding: "13px 16px",
-    fontSize: "13px",
-    color: t.sub,
-    borderBottom: `1px solid ${t.border}`
+    padding: "14px",
+    fontSize: "14px",
+    color: "#334155",
+    borderBottom: "1px solid #f1f5f9"
   };
 
   return (
-    <div style={{ fontFamily: t.font, color: t.text, maxWidth: 860, margin: "0 auto" }}>
-
-      {/* ── TOP BAR ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-        <ActionBtn icon="ti-arrow-left" label="Retour" primary onClick={onRetour} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <ActionBtn icon="ti-pencil" label="Saisir les notes" onClick={() => onEdit(eleve)} />
-          <ActionBtn icon="ti-user-cog" label="Modifier l'élève" onClick={() => onEditInfo(eleve)} />
-          <ActionBtn icon="ti-printer" label="Imprimer" c={bg} onClick={handlePrint} />
-          <ActionBtn icon="ti-download" label="Télécharger" c={t.blue} bg={t.blueSoft} border={t.blueMid} onClick={downloadBulletin} />
-        </div>
-      </div>
-
-      {/* ── HERO CARD ── */}
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden", marginBottom: 14 }}>
-        <div style={{ padding: "16px 18px 14px", display: "flex", alignItems: "flex-start", gap: 18, flexWrap: "wrap" }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-            background: `linear-gradient(135deg,${t.blueMid},${t.blueSoft})`,
-            border: `2px solid ${t.blueMid}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 700, color: t.blue,
-            boxShadow: "0 2px 10px rgba(37,99,235,0.15)",
-          }}>{getInitials(eleve)}</div>
-
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.text, lineHeight: 1.2 }}>{getNomComplet(eleve)}</h2>
-            <div style={{ fontSize: 11.5, color: t.muted, marginTop: 3 }}>Dossier de notes — {trimestre}</div>
-            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-              <Chip label={eleve.classe} c={t.sub} bg={t.border} />
-              <Chip label={`Moy. ${m}/20`} c={noteColor(m)} bg={t.bg} />
-              <Chip label={s.l} c={s.c} bg={`${s.c}14`} />
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 20, width: 700, overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}
+      >
+        {/* HEADER avec TABS */}
+        <div style={{ background: "#0066CC", padding: "24px", color: "#fff" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <div style={{
+                width: 60, height: 60, borderRadius: "50%",
+                background: "rgba(255,255,255,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, fontSize: 22, color: "#fff", flexShrink: 0
+              }}>
+                {getInitials(eleve)}
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20 }}>{getNomComplet(eleve)}</h2>
+                <span style={{ color: "#e0f2fe", fontWeight: 600, fontSize: 14 }}>
+                  {eleve.classe} &nbsp;•&nbsp; {trimestre} &nbsp;•&nbsp; {s.l}
+                </span>
+              </div>
             </div>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 16 }}>✕</button>
+          </div>
+
+          {/* TABS */}
+          <div style={{ display: "flex", gap: 10, marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 12 }}>
+            {[
+              { id: "resume", label: "Résumé" },
+              { id: "bulletin", label: "Bulletin" },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDossierTab(tab.id)}
+                style={{
+                  background: dossierTab === tab.id ? "#fff" : "transparent",
+                  color: dossierTab === tab.id ? "#0066CC" : "#fff",
+                  border: "none", borderRadius: 8,
+                  padding: "8px 16px", fontWeight: 700, cursor: "pointer",
+                  fontSize: 14, transition: "all .2s"
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* TABS */}
-      <div style={{ display: "flex", flexWrap: "wrap", borderBottom: `1px solid ${t.border}`, marginBottom: 16 }}>
-        {[
-          { id: "resume", icon: "ti-layout-dashboard", label: "Résumé" },
-          { id: "bulletin", icon: "ti-file-text", label: "Bulletin" },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setDossierTab(tab.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              background: "transparent", border: "none",
-              borderBottom: dossierTab === tab.id ? `2px solid ${t.blue}` : "2px solid transparent",
-              color: dossierTab === tab.id ? t.blue : t.sub,
-              padding: "11px 16px", fontWeight: dossierTab === tab.id ? 600 : 400,
-              cursor: "pointer", fontFamily: t.font, fontSize: 12.5,
-              marginBottom: -1, transition: "all .15s"
-            }}
-          >
-            <i className={`ti ${tab.icon}`} style={{ fontSize: 14 }} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* BODY */}
-      <div>
+        {/* BODY */}
+        <div style={{ padding: "24px", maxHeight: "70vh", overflowY: "auto" }}>
 
           {/* ── TAB RÉSUMÉ ── */}
           {dossierTab === "resume" && (
             <>
               {/* 3 cartes stats */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 18 }}>
-                <div style={{ background: t.surface, borderRadius: t.radius, padding: "16px 18px", textAlign: "center", border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
-                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 6 }}>Moyenne générale</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: noteColor(m), lineHeight: 1 }}>{m}</div>
-                  <div style={{ color: t.muted, fontSize: 11.5, marginTop: 4 }}>/20</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 20 }}>
+                <div style={{ background: "#f8fafc", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #e2e8f0" }}>
+                  <div style={{ color: "#64748b", fontWeight: 600, marginBottom: 6 }}>Moyenne Générale</div>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: noteColor(m) }}>{m}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 14 }}>/20</div>
                 </div>
-                <div style={{ background: t.surface, borderRadius: t.radius, padding: "16px 18px", textAlign: "center", border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
-                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 6 }}>Point fort</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: t.text }}>{mf}</div>
-                  <div style={{ background: t.greenSoft, color: t.green, borderRadius: 20, display: "inline-block", padding: "3px 10px", marginTop: 6, fontWeight: 600, fontSize: 11 }}>{mx}/20</div>
+                <div style={{ background: "#f0fdf4", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #bbf7d0" }}>
+                  <div style={{ color: "#14d65b", fontWeight: 600, marginBottom: 6 }}>Point Fort</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: "#065f46" }}>{mf}</div>
+                  <div style={{ background: "#dcfce7", color: "#16a34a", borderRadius: 20, display: "inline-block", padding: "2px 10px", marginTop: 6, fontWeight: 700 }}>{mx}/20</div>
                 </div>
-                <div style={{ background: t.surface, borderRadius: t.radius, padding: "16px 18px", textAlign: "center", border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
-                  <div style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 6 }}>À renforcer</div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: t.text }}>{mw}</div>
-                  <div style={{ background: t.redSoft, color: t.red, borderRadius: 20, display: "inline-block", padding: "3px 10px", marginTop: 6, fontWeight: 600, fontSize: 11 }}>{mn}/20</div>
+                <div style={{ background: "#fef2f2", borderRadius: 12, padding: 16, textAlign: "center", border: "1px solid #fecaca" }}>
+                  <div style={{ color: "#dc2626", fontWeight: 600, marginBottom: 6 }}>À Renforcer</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: "#991b1b" }}>{mw}</div>
+                  <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 20, display: "inline-block", padding: "2px 10px", marginTop: 6, fontWeight: 700 }}>{mn}/20</div>
                 </div>
               </div>
 
               {/* ── INDICATEUR D'EFFORT NÉCESSAIRE (Méthode C) ── */}
-              <div style={{ marginTop: 18 }}>
+              <div style={{ marginTop: 20 }}>
                 <div style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 600,
-                  color: t.text,
+                  color: "#1e293b",
                   marginBottom: 12,
                   paddingBottom: 8,
-                  borderBottom: `1px solid ${t.border}`,
+                  borderBottom: "2px solid #e2e8f0",
                   display: "flex",
                   alignItems: "center",
                   gap: 8
                 }}>
-                  <i className="ti ti-target" style={{ fontSize: 16, color: t.blue }} />
+                  <Target size={16} strokeWidth={2.5} />
                   <span>Indicateur d'effort nécessaire</span>
-                  <span style={{ fontSize: 11.5, fontWeight: 400, color: t.muted }}>priorité d'amélioration</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>priorité d'amélioration</span>
                 </div>
 
                 <div style={{
                   display: "flex",
                   flexDirection: "column",
-                  background: t.surface,
-                  borderRadius: t.radiusLg,
-                  border: `1px solid ${t.border}`,
-                  boxShadow: t.shadow,
-                  padding: "6px 16px"
+                  gap: 10,
+                  background: "#ffffff",
+                  borderRadius: 16,
+                  border: "1px solid #e2e8f0",
+                  padding: "12px 16px"
                 }}>
                   {MATIERES.map((matiere) => {
                     const note = tNotes[matiere];
@@ -654,24 +639,24 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
 
                     if (note >= 18) {
                       objectif = "Maintien";
-                      objectifColor = t.green;
-                      objectifBg = t.greenSoft;
-                      PriorityIcon = <i className="ti ti-circle-check" style={{ fontSize: 14, color: t.green }} />;
+                      objectifColor = "#16a34a";
+                      objectifBg = "#f0fdf4";
+                      PriorityIcon = <CheckCircle size={14} color="#16a34a" strokeWidth={2} />;
                     } else if (note >= 16) {
                       objectif = "Peut mieux faire";
-                      objectifColor = t.blue;
-                      objectifBg = t.blueSoft;
-                      PriorityIcon = <i className="ti ti-alert-triangle" style={{ fontSize: 14, color: t.blue }} />;
+                      objectifColor = "#eab308";
+                      objectifBg = "#fefce8";
+                      PriorityIcon = <AlertTriangle size={14} color="#eab308" strokeWidth={2} />;
                     } else if (note >= 14) {
                       objectif = "À surveiller";
-                      objectifColor = t.amber;
-                      objectifBg = t.amberSoft;
-                      PriorityIcon = <i className="ti ti-eye" style={{ fontSize: 14, color: t.amber }} />;
+                      objectifColor = "#f97316";
+                      objectifBg = "#fff7ed";
+                      PriorityIcon = <Eye size={14} color="#f97316" strokeWidth={2} />;
                     } else {
                       objectif = "Priorité d'amélioration";
-                      objectifColor = t.red;
-                      objectifBg = t.redSoft;
-                      PriorityIcon = <i className="ti ti-alert-circle" style={{ fontSize: 14, color: t.red }} />;
+                      objectifColor = "#dc2626";
+                      objectifBg = "#fef2f2";
+                      PriorityIcon = <AlertCircle size={14} color="#dc2626" strokeWidth={2} />;
                     }
 
                     return (
@@ -681,20 +666,20 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "11px 0",
-                          borderBottom: `1px solid ${t.border}`
+                          padding: "10px 0",
+                          borderBottom: "1px solid #f1f5f9"
                         }}
                       >
-                        <div style={{ flex: "0 0 150px" }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{nom}</span>
-                          <span style={{ fontSize: 11, color: t.muted, marginLeft: 6 }}>(×{coeff})</span>
+                        <div style={{ flex: "0 0 140px" }}>
+                          <span style={{ fontWeight: 600, color: "#0f172a" }}>{nom}</span>
+                          <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 6 }}>(×{coeff})</span>
                         </div>
 
                         <div style={{
                           fontWeight: 700,
-                          fontSize: 13.5,
+                          fontSize: 18,
                           color: noteColor(note),
-                          width: 60,
+                          width: 50,
                           textAlign: "center"
                         }}>
                           {note}/20
@@ -708,7 +693,17 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
                           gap: 8
                         }}>
                           {PriorityIcon}
-                          <Chip label={objectif} c={objectifColor} bg={objectifBg} />
+                          <span style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: objectifColor,
+                            background: objectifBg,
+                            padding: "4px 12px",
+                            borderRadius: 20,
+                            display: "inline-block"
+                          }}>
+                            {objectif}
+                          </span>
                         </div>
                       </div>
                     );
@@ -720,29 +715,28 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
                   display: "flex",
                   gap: 16,
                   marginTop: 12,
-                  padding: "9px 14px",
-                  background: t.bg,
-                  border: `1px solid ${t.border}`,
-                  borderRadius: t.radius,
+                  padding: "8px 12px",
+                  background: "#f8fafc",
+                  borderRadius: 12,
                   fontSize: 11,
-                  color: t.sub,
+                  color: "#475569",
                   flexWrap: "wrap",
                   alignItems: "center"
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <i className="ti ti-circle-check" style={{ fontSize: 12, color: t.green }} />
+                    <CheckCircle size={12} color="#16a34a" />
                     <span>≥18 : Maintien</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <i className="ti ti-alert-triangle" style={{ fontSize: 12, color: t.blue }} />
+                    <AlertTriangle size={12} color="#eab308" />
                     <span>16–17 : Peut mieux faire</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <i className="ti ti-eye" style={{ fontSize: 12, color: t.amber }} />
+                    <Eye size={12} color="#f97316" />
                     <span>14–15 : À surveiller</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <i className="ti ti-alert-circle" style={{ fontSize: 12, color: t.red }} />
+                    <AlertCircle size={12} color="#dc2626" />
                     <span>&lt;14 : Priorité</span>
                   </div>
                 </div>
@@ -756,53 +750,65 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
 
           {/* ── TAB BULLETIN ── */}
           {dossierTab === "bulletin" && (
-            <div style={{ background: t.surface, borderRadius: t.radiusLg, border: `1px solid ${t.border}`, boxShadow: t.shadow, padding: "18px 20px" }}>
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", padding: "20px 24px" }}>
               {/* Bandeau infos élève */}
-              <div style={{ background: t.bg, padding: "14px 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, borderRadius: t.radius, marginBottom: 18, border: `1px solid ${t.border}` }}>
-                {[
-                  ["Nom complet", getNomComplet(eleve)],
-                  ["Matricule", eleve.matricule],
-                  ["Classe", eleve.classe],
-                  ["Sexe", eleve.sexe === "M" ? "Masculin" : "Féminin"],
-                  ["Trimestre", trimestre],
-                  ["Présences", `${eleve.presences.present}/${eleve.presences.total}`],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginTop: 2 }}>{value}</div>
-                  </div>
-                ))}
+              <div style={{ background: "#f8fafc", padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, borderRadius: 10, marginBottom: 18, border: "1px solid #e2e8f0" }}>
                 <div>
-                  <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>Statut</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: s.c, marginTop: 2 }}>{s.l}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Nom complet</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{getNomComplet(eleve)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Matricule</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.matricule}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Classe</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.classe}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Sexe</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.sexe === "M" ? "Masculin" : "Féminin"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Trimestre</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{trimestre}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Présences</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginTop: 2 }}>{eleve.presences.present}/{eleve.presences.total}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Statut</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: s.c, marginTop: 2 }}>{s.l}</div>
                 </div>
               </div>
               {/* Tableau des notes */}
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 420 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr style={{ background: t.blue }}>
-                      {["Matière", "Note", "Coef.", "Appréciation"].map(h => (
-                        <th key={h} style={{ padding: "11px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,.9)", textTransform: "uppercase", letterSpacing: ".4px" }}>{h}</th>
-                      ))}
+                    <tr style={{ background: "#0066CC" }}>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Matière</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Note</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Coef.</th>
+                      <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, color: "#fff", textTransform: "uppercase", letterSpacing: "0.4px" }}>Appréciation</th>
                     </tr>
                   </thead>
                   <tbody>
                     {MATIERES.map((mat, idx) => (
-                      <tr key={mat} style={{ background: idx % 2 === 0 ? t.surface : t.bg, borderBottom: `1px solid ${t.border}` }}>
-                        <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 600, color: t.text }}>{mat}</td>
-                        <td style={{ padding: "12px 14px", fontSize: 13.5, fontWeight: 700, color: noteColor(tNotes[mat]) }}>{tNotes[mat]}/20</td>
-                        <td style={{ padding: "12px 14px", fontSize: 11.5, color: t.muted }}>×{coeffs[mat]}</td>
-                        <td style={{ padding: "12px 14px", fontSize: 11.5, fontWeight: 600, color: noteColor(tNotes[mat]) }}>{noteLabel(tNotes[mat])}</td>
+                      <tr key={mat} style={{ background: idx % 2 === 0 ? "#fff" : "#fafafa", borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "13px 16px", fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{mat}</td>
+                        <td style={{ padding: "13px 16px", fontSize: 15, fontWeight: 700, color: noteColor(tNotes[mat]) }}>{tNotes[mat]}/20</td>
+                        <td style={{ padding: "13px 16px", fontSize: 14, color: "#94a3b8" }}>×{coeffs[mat]}</td>
+                        <td style={{ padding: "13px 16px", fontSize: 14, fontWeight: 600, color: noteColor(tNotes[mat]) }}>{noteLabel(tNotes[mat])}</td>
                       </tr>
                     ))}
-                    <tr style={{ background: t.blueSoft, borderTop: `2px solid ${t.blue}` }}>
-                      <td colSpan={2} style={{ padding: "13px 14px", fontSize: 13, fontWeight: 700, color: t.text }}>Moyenne pondérée</td>
-                      <td colSpan={2} style={{ padding: "13px 14px", fontSize: 13.5, fontWeight: 700, color: t.blue }}>{m}/20</td>
+                    <tr style={{ background: "#eff6ff" }}>
+                      <td colSpan={2} style={{ padding: "13px 16px", fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Moyenne pondérée</td>
+                      <td colSpan={2} style={{ padding: "13px 16px", fontSize: 17, fontWeight: 800, color: "#0066CC" }}>{m}/20</td>
                     </tr>
-                    <tr style={{ borderTop: `1px solid ${t.border}` }}>
-                      <td colSpan={2} style={{ padding: "10px 14px", fontSize: 11.5, color: t.green, fontWeight: 600 }}>Point fort : {mf} ({mx}/20)</td>
-                      <td colSpan={2} style={{ padding: "10px 14px", fontSize: 11.5, color: t.red, fontWeight: 600 }}>À renforcer : {mw} ({mn}/20)</td>
+                    <tr style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td colSpan={2} style={{ padding: "10px 16px", fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Point fort : {mf} ({mx}/20)</td>
+                      <td colSpan={2} style={{ padding: "10px 16px", fontSize: 13, color: "#dc2626", fontWeight: 600 }}>À renforcer : {mw} ({mn}/20)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -810,7 +816,21 @@ function FicheNotes({ eleve, trimestre, notesData, coeffs, getMoyenne, onRetour,
             </div>
           )}
 
-      </div>
+          {/* ACTIONS */}
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: 12, border: "1px solid #cbd5e1", borderRadius: 10, background: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>Fermer</button>
+            <button onClick={() => onEdit(eleve)} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: "#0066CC", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-pencil" style={{ fontSize: 20 }} /> Modifier
+            </button>
+            <button onClick={handlePrint} style={{ flex: 1, padding: 12, border: "none", borderRadius: 10, background: bg, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-printer" style={{ fontSize: 20 }} /> Imprimer
+            </button>
+            <button onClick={downloadBulletin} style={{ flex: 1, padding: 12, border: "1px solid #0066CC", borderRadius: 10, background: "#fff", color: "#0066CC", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <i className="ti ti-download" style={{ fontSize: 20 }} /> Télécharger
+            </button>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -842,6 +862,7 @@ export default function Notes() {
   const [showPeriod, setShowPeriod] = useState(false);
   const [period, setPeriod] = useState("Ce mois");
   const [showInsights, setShowInsights] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
 
   const notifRef = useRef(); const exportRef = useRef(); const periodRef = useRef();
@@ -932,24 +953,11 @@ export default function Notes() {
   };
 
   const INSIGHTS = [
-    { icon: <i className="ti ti-alert-triangle" />, c: t.red, bg: t.redSoft, t: `${getDifficultyCount()} élèves nécessitent un suivi au ${trimestre}`, d: "Leur moyenne est inférieure à 10/20." },
-    { icon: <i className="ti ti-trending-up" />, c: t.green, bg: t.greenSoft, t: "Mathématiques coefficient " + coeffs["Mathématiques"], d: "Matière la plus déterminante pour le classement." },
-    { icon: <i className="ti ti-crown" />, c: t.blue, bg: t.blueSoft, t: "Terminale A domine", d: "Meilleure performance globale ce trimestre." },
-    { icon: <i className="ti ti-history" />, c: t.amber, bg: t.amberSoft, t: "Historique activé", d: "Vous pouvez comparer les T1, T2 et T3." },
+    { icon: <i className="ti ti-alert-triangle" />, bg: "#ef4444", t: `${getDifficultyCount()} élèves nécessitent un suivi au ${trimestre}`, d: "Leur moyenne est inférieure à 10/20." },
+    { icon: <i className="ti ti-trending-up" />, bg: "#10b981", t: "Mathématiques coefficient " + coeffs["Mathématiques"], d: "Matière la plus déterminante pour le classement." },
+    { icon: <i className="ti ti-crown" />, bg: "#8b5cf6", t: "Terminale A domine", d: "Meilleure performance globale ce trimestre." },
+    { icon: <i className="ti ti-history" />, bg: "#f59e0b", t: "Historique activé", d: "Vous pouvez comparer les T1, T2 et T3." },
   ];
-
-  if (sel) return (
-    <FicheNotes
-      eleve={sel}
-      trimestre={trimestre}
-      notesData={notesData}
-      coeffs={coeffs}
-      getMoyenne={getMoyenne}
-      onRetour={() => setSel(null)}
-      onEdit={(e) => { setSel(null); setTimeout(() => setEditSel(e), 150); }}
-      onEditInfo={(e) => { setSel(null); setTimeout(() => setEditInfoSel(e), 150); }}
-    />
-  );
 
   return (
     <div className="notes-page">
@@ -957,7 +965,7 @@ export default function Notes() {
       {/* Header */}
       <div className="notes-header">
         <div>
-          <h1>Gestion des notes <span style={{ fontSize: 13, color: t.sub, fontWeight: 500 }}>— {trimestre}</span></h1>
+          <h1>Gestion des notes <span style={{ fontSize: 19, color: "#64748b", fontWeight: 600 }}>- {trimestre}</span></h1>
           <div className="breadcrumb"><span className="active">Accueil</span><span>›</span><span>Gestion des notes</span></div>
         </div>
         <div className="header-actions">
@@ -981,43 +989,42 @@ export default function Notes() {
 
       {/* Stats */}
       <div className="stats-grid">
-        <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
+        <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top">
-            <div className="icon-box" style={{ background: t.blueSoft, color: t.blue }}><i className="ti ti-chart-bar" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Moyenne générale</div>
-              <div className="stat-value">{getGlobalMoyenne()} <span className="unit">/20</span></div>
-              <div className="stat-sub">Toutes les classes confondues</div>
-            </div>
+            <div className="icon-box" style={{ background: "#eff6ff", color: "#3b82f6" }}><i className="ti ti-chart-bar" style={{ fontSize: 22 }}></i></div>
+            <div><div className="stat-label">Moyenne générale</div><div className="stat-value">{getGlobalMoyenne()} <span className="unit">/20</span></div></div>
           </div>
+          <div className="bottom"><div><div className="trend up">Toutes les classes confondues</div></div></div>
         </motion.div>
-        <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.greenSoft, color: t.green }}><i className="ti ti-target" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Taux de réussite</div>
-              <div className="stat-value">{Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%</div>
-              <div className="stat-sub">Admis ou Excellents</div>
+        <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
+          <div className="top" style={{ justifyContent: "space-between", display: "flex", width: "100%" }}>
+            <div style={{ display: "flex", gap: 14 }}>
+              <div className="icon-box" style={{ background: "#ecfdf5", color: "#10b981" }}><i className="ti ti-target" style={{ fontSize: 22 }}></i></div>
+              <div><div className="stat-label">Taux de réussite</div><div className="stat-value">{Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%</div></div>
             </div>
+            <CircleProgress pct={Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)} color="#10b981" label={`${Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%`} />
           </div>
+          <div className="bottom"><div><div className="trend up">Admis ou Excellents</div></div></div>
         </motion.div>
-        <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.redSoft, color: t.red }}><i className="ti ti-alert-triangle" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Élèves en difficulté</div>
-              <div className="stat-value">{getDifficultyCount()}</div>
-              <div className="stat-sub">Moyenne &lt; 10 — {Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)}% de la sélection</div>
+        <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
+          <div className="top" style={{ justifyContent: "space-between", display: "flex", width: "100%" }}>
+            <div style={{ display: "flex", gap: 14 }}>
+              <div className="icon-box" style={{ background: "#fef2f2", color: "#ef4444" }}><i className="ti ti-alert-triangle" style={{ fontSize: 22 }}></i></div>
+              <div><div className="stat-label">Élèves en difficulté</div><div className="stat-value">{getDifficultyCount()}</div></div>
             </div>
+            <CircleProgress pct={Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)} color="#ef4444" label={`${Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)}%`} />
           </div>
+          <div className="bottom"><div><div className="trend down">Moyenne &lt; 10</div></div></div>
         </motion.div>
-        <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
+        <motion.div className="stat-card" whileHover={{ y: -8, boxShadow: "0 15px 30px rgba(0,0,0,0.1)" }} whileTap={{ y: 0, scale: 0.96 }} style={{ cursor: "pointer" }}>
           <div className="top">
-            <div className="icon-box" style={{ background: t.amberSoft, color: t.amber }}><i className="ti ti-award" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Classement</div>
-              <div className="stat-value">Mis à jour</div>
-              <div className="stat-sub">Automatique via Coefficients</div>
+            <div className="icon-box" style={{ background: "#faf5ff", color: "#8b5cf6" }}><i className="ti ti-award" style={{ fontSize: 22 }}></i></div>
+            <div><div className="stat-label">Classement</div><div className="stat-value" style={{ color: "#3b82f6", fontSize: 23 }}>Mis à jour</div><div className="stat-sub">Automatique via Coefficients</div></div>
+          </div>
+          <div className="bottom">
+            <div className="trend up">Système actif</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 28 }}>
+              {[3, 5, 4, 7, 8].map((h, i) => <div key={i} style={{ width: 5, height: h * 3.5, background: `rgba(139,92,246,${0.3 + i * 0.15})`, borderRadius: "2px 2px 0 0" }} />)}
             </div>
           </div>
         </motion.div>
@@ -1029,15 +1036,15 @@ export default function Notes() {
           <div className="chart-header">
             <div className="chart-title">Évolution des moyennes par classe</div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div className="legend"><span><span className="dot" style={{ background: t.blue }} />Ce mois</span><span><span className="dot" style={{ background: t.blueMid }} />Mois dernier</span></div>
+              <div className="legend"><span><span className="dot" style={{ background: "#3b82f6" }} />Ce mois</span><span><span className="dot" style={{ background: "#e2e8f0" }} />Mois dernier</span></div>
             </div>
           </div>
           <div className="bar-chart">
             {EVO.map((d, i) => (
               <div className="bar-group" key={i}>
                 <div className="bar-pair">
-                  <div className="bar current" style={{ height: `${(d.moy / 20) * 176}px` }}>{d.moy}</div>
-                  <div className="bar previous" style={{ height: `${(d.prev / 20) * 176}px` }}>{d.prev}</div>
+                  <div className="bar current" style={{ height: `${(d.moy / 20) * 280}px` }}>{d.moy}</div>
+                  <div className="bar previous" style={{ height: `${(d.prev / 20) * 280}px` }}>{d.prev}</div>
                 </div>
                 <div className="bar-label">{d.classe}</div>
               </div>
@@ -1046,33 +1053,12 @@ export default function Notes() {
         </div>
 
         <div className="insights-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: t.text }}>Insights pédagogiques</h3>
-            <button
-              onClick={() => setShowInsights(v => !v)}
-              style={{
-                fontSize: 12.5, fontWeight: 600, background: t.blueSoft,
-                border: `1px solid ${t.blueMid}`, borderRadius: t.radius, padding: "5px 12px",
-                color: t.blue, cursor: "pointer", fontFamily: t.font, whiteSpace: "nowrap",
-              }}
-            >
-              {showInsights ? "Réduire" : "Voir tout"}
-            </button>
-          </div>
+          <svg className="wave" viewBox="0 0 1440 320" fill="rgba(255,255,255,0.1)"><path d="M0,224L48,213.3C96,203,192,181,288,186.7C384,192,480,224,576,234.7C672,245,768,235,864,202.7C960,171,1056,117,1152,106.7C1248,96,1344,128,1392,144L1440,160L1440,320L0,320Z" /></svg>
+          <div className="insights-header"><h3>Insights pédagogiques</h3><button className="voir-tout" onClick={() => setShowInsights(v => !v)}>{showInsights ? "Réduire" : "Voir tout"}</button></div>
           {(showInsights ? INSIGHTS : INSIGHTS.slice(0, 2)).map((it, i) => (
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-              key={i}
-              style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 12 }}
-            >
-              <div style={{
-                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: it.bg, color: it.c, fontSize: 15,
-              }}>{it.icon}</div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 2 }}>{it.t}</div>
-                <div style={{ fontSize: 11.5, color: t.muted, lineHeight: 1.4 }}>{it.d}</div>
-              </div>
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="insight-item" key={i}>
+              <div className="insight-icon" style={{ background: it.bg }}>{it.icon}</div>
+              <div><div className="title">{it.t}</div><div className="desc">{it.d}</div></div>
             </motion.div>
           ))}
         </div>
@@ -1116,7 +1102,7 @@ export default function Notes() {
       {/* Table */}
       <div className="table-section">
         <div className="table-header">
-          <h2>Liste des élèves <span style={{ fontSize: 11.5, color: t.muted, fontWeight: 500 }}>({filtered.length})</span></h2>
+          <h2>Liste des élèves <span style={{ fontSize: 16, color: "#94a3b8", fontWeight: 500 }}>({filtered.length})</span></h2>
           <div className="table-actions">
             <select onChange={e => setSortDir(e.target.value)} value={sortDir}>
               <option value="desc">Trier par moyenne ↓</option>
@@ -1125,14 +1111,15 @@ export default function Notes() {
           </div>
         </div>
 
-        <div style={{ overflowX: "auto", borderRadius: 8 }}>
+        {/* ⬇️ conteneur scrollable, comme sur la page paiement */}
+        <div style={{ maxHeight: 320, overflowY: "auto", overflowX: "auto", borderRadius: 8 }}>
           <table className="notes-table">
-            <thead style={{ background: t.bg }}>
+            <thead style={{ position: "sticky", top: 0, background: "#fff", zIndex: 1 }}>
               <tr>
                 <th style={{ width: 40 }}>#</th>
                 <th>ÉLÈVE ↕</th>
                 {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(m => <th key={m} title={`Coefficient ${coeffs[m]}`}>{MAT_ABR[m]}</th>)}
-                <th>MOYENNE ↕</th><th>STATUT ↕</th><th>ACTIONS</th><th style={{ width: 30 }}></th>
+                <th>MOYENNE ↕</th><th>STATUT ↕</th><th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -1140,30 +1127,34 @@ export default function Notes() {
                 {shown.map((el, i) => {
                   const m = getMoyenne(notesData[el.id][trimestre]), s = statutInfo(m);
                   return (
-                    <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={el.id}
-                      onClick={() => setSel(el)} style={{ cursor: "pointer" }}>
-                      <td style={{ color: t.muted, fontWeight: 600 }}>{(safePage - 1) * perPage + i + 1}</td>
-                      <td><div className="eleve-cell"><div className="eleve-avatar">{getInitials(el)}</div><span className="eleve-name">{getNomComplet(el)}</span></div></td>
+                    <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} key={el.id}>
+                      <td style={{ color: "#94a3b8", fontWeight: 700 }}>{(safePage - 1) * perPage + i + 1}</td>
+                      <td><div className="eleve-cell"><div className="eleve-avatar" style={{ background: avatarColor(el.id) }}>{getInitials(el)}</div><span className="eleve-name">{getNomComplet(el)}</span></div></td>
                       {(matiere === "Toutes les matières" ? MATIERES : [matiere]).map(mat => { const n = notesData[el.id][trimestre][mat]; return <td key={mat}><span className="note-val" style={{ color: noteColor(n) }}>{n}</span></td>; })}
                       <td><span className="moy-val" style={{ color: noteColor(m) }}>{m}</span></td>
-                      <td><span className="statut-badge" style={{ color: s.c, background: `${s.c}14` }}>{s.l}</span></td>
-                      <td onClick={e => e.stopPropagation()}><div className="actions-cell" style={{ position: "relative", display: "flex", alignItems: "center", flexWrap: "nowrap", gap: 6 }}>
-                        <button title="Saisir les notes" onClick={e => { e.stopPropagation(); setEditSel(el); }} style={{ background: t.surface, color: t.sub, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 8px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", transition: "all .15s", fontFamily: t.font, display: "flex", alignItems: "center" }}>
-                          <i className="ti ti-pencil" style={{ fontSize: 14 }} />
+                      <td><span className="statut-badge" style={{ color: s.c }}>{s.l}</span></td>
+                      <td><div className="actions-cell" style={{ position: "relative", display: "flex", gap: 6 }}>
+                        <button onClick={() => setSel(el)} style={{ background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s", display: "flex", alignItems: "center", gap: 4 }}>
+                          <i className="ti ti-eye" /> Voir
                         </button>
-                        <button title="Supprimer" onClick={e => { e.stopPropagation(); setConfirmDel(el); }} style={{ background: t.redSoft, color: t.red, border: "none", borderRadius: t.radius, padding: "5px 8px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", transition: "all .15s", fontFamily: t.font, display: "flex", alignItems: "center" }}>
-                          <i className="ti ti-trash" style={{ fontSize: 14 }} />
+                        <button onClick={() => setEditSel(el)} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                          <i className="ti ti-pencil" />
                         </button>
+                        <button onClick={() => setConfirmDel(el)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 15, fontWeight: 600, cursor: "pointer", transition: "0.2s" }}>
+                          <i className="ti ti-trash" />
+                        </button>
+                        <button title="Plus" onClick={() => setCtxMenu(ctxMenu === el.id ? null : el.id)} style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 8px", cursor: "pointer" }}>
+                          <i className="ti ti-dots-vertical" />
+                        </button>
+                        {ctxMenu === el.id && <ContextMenu eleve={el} onClose={() => setCtxMenu(null)} onView={setSel} onEdit={setEditSel} onEditInfo={setEditInfoSel} onPrint={() => { setSel(el); }} />}
                       </div></td>
-                      <td><i className="ti ti-chevron-right" style={{ fontSize: 15, color: t.muted }} /></td>
                     </motion.tr>
                   );
                 })}
               </AnimatePresence>
               {shown.length === 0 && (
                 <tr>
-                  <td colSpan={(matiere === "Toutes les matières" ? MATIERES : [matiere]).length + 6} style={{ textAlign: "center", padding: 48, color: t.muted, fontSize: 13 }}>
-                    <i className="ti ti-search" style={{ fontSize: 28, display: "block", marginBottom: 10, color: t.border }} />
+                  <td colSpan={(matiere === "Toutes les matières" ? MATIERES : [matiere]).length + 5} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
                     Aucun élève trouvé
                   </td>
                 </tr>
@@ -1177,6 +1168,7 @@ export default function Notes() {
 
       {/* Modales */}
       <AnimatePresence>
+        {sel && <Modal key="view" eleve={sel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} getMoyenne={getMoyenne} onClose={() => setSel(null)} onEdit={(e) => { setSel(null); setTimeout(() => setEditSel(e), 150); }} />}
         {editSel && <EditModal key="edit" eleve={editSel} trimestre={trimestre} notesData={notesData} coeffs={coeffs} setNotesData={setNotesData} onClose={() => setEditSel(null)} showToast={showToast} />}
         {showCoeffs && <CoeffModal key="coeffs" coeffs={coeffs} setCoeffs={setCoeffs} onClose={() => setShowCoeffs(false)} showToast={showToast} />}
         {showAdd && <StudentModal key="add" onClose={() => setShowAdd(false)} onSave={handleSaveStudent} classes={CLASSES} trimestre={trimestre} />}
