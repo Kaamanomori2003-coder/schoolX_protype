@@ -375,7 +375,7 @@ function ProfilProf({ prof, onRetour, onEdit }) {
       </div>
 
       {/* ── TABS ── */}
-      <div style={{ display:"flex", flexWrap:"wrap", borderBottom:`1px solid ${t.border}`, marginBottom:16 }}>
+      <div style={{ display:"flex", borderBottom:`1px solid ${t.border}`, marginBottom:16, overflowX:"auto" }}>
         {tabs.map(tb=>(
           <TabBtn key={tb.key} active={tab===tb.key} icon={tb.icon} label={tb.label} onClick={()=>setTab(tb.key)} />
         ))}
