@@ -120,20 +120,20 @@ export function Matieres() {
       </div>
 
       {/* STATS */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"ti-book",  label:"Total matières",   value:matieres.length,   c:t.blue,    bg:t.blueSoft   },
           { icon:"ti-clock", label:"Heures/semaine",   value:`${totalHeures}h`, c:t.amber,   bg:t.amberSoft  },
           { icon:"ti-school",label:"Classes couvertes", value:classes,          c:t.green,   bg:t.greenSoft  },
           { icon:"ti-award", label:"Coef. max",         value:coefMax,          c:t.purple,  bg:t.purpleSoft },
         ].map(s => (
-          <div key={s.label} style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:t.shadow }}>
-            <div style={{ width:38, height:38, borderRadius:9, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <i className={`ti ${s.icon}`} style={{ fontSize:18, color:s.c }} />
+          <div key={s.label} style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:t.shadow }}>
+            <div style={{ width:40, height:40, borderRadius:9, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <i className={`ti ${s.icon}`} style={{ fontSize:19, color:s.c }} />
             </div>
             <div>
-              <div style={{ fontSize:10, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{s.label}</div>
-              <div style={{ fontSize:19, fontWeight:700, color:t.text, marginTop:2, lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontSize:11, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{s.label}</div>
+              <div style={{ fontSize:21, fontWeight:700, color:t.text, marginTop:3, lineHeight:1 }}>{s.value}</div>
             </div>
           </div>
         ))}

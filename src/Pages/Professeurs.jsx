@@ -224,13 +224,13 @@ const Chip = ({ label, c, bg, small }) => (
 );
 
 const StatBox = ({ icon, label, value, c=t.blue, bg=t.blueSoft }) => (
-  <div style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, boxShadow:t.shadow }}>
-    <div style={{ width:38, height:38, borderRadius:9, background:bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-      <i className={`ti ${icon}`} style={{ fontSize:18, color:c }} />
+  <div style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:t.shadow }}>
+    <div style={{ width:40, height:40, borderRadius:9, background:bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      <i className={`ti ${icon}`} style={{ fontSize:19, color:c }} />
     </div>
     <div>
-      <div style={{ fontSize:10, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{label}</div>
-      <div style={{ fontSize:19, fontWeight:700, color:t.text, marginTop:2, lineHeight:1 }}>{value}</div>
+      <div style={{ fontSize:11, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{label}</div>
+      <div style={{ fontSize:21, fontWeight:700, color:t.text, marginTop:3, lineHeight:1 }}>{value}</div>
     </div>
   </div>
 );
@@ -782,7 +782,7 @@ export default function Professeurs() {
       </div>
 
       {/* STATS */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         <StatBox icon="ti-school"       label="Total"     value={profs.length} c={t.blue}   bg={t.blueSoft}   />
         <StatBox icon="ti-circle-check" label="Actifs"    value={actifs}       c={t.green}  bg={t.greenSoft}  />
         <StatBox icon="ti-beach"        label="En congé"  value={conges}       c={t.amber}  bg={t.amberSoft}  />

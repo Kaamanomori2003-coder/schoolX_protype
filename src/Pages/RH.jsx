@@ -995,23 +995,18 @@ export default function RH() {
       </div>
 
       {/* STATS CARDS */}
-      <div className="stats-grid" style={{ marginBottom: 22 }}>
+      <div className="stats-grid">
         {[
-          { label: "Membres de l'équipe", value: employes.length, sub: "Actifs, congés, etc.", icon: <i className="ti ti-users" style={{ fontSize: 19 }} />, bg: t.blueSoft, color: t.blue },
-          { label: "Enseignants Actifs", value: activeTeachersCount, sub: "Sur tous les cycles", icon: <i className="ti ti-school" style={{ fontSize: 19 }} />, bg: t.greenSoft, color: t.green },
-          { label: "Absences du mois", value: totalAbsencesMonth, sub: "Retards et absences loggués", icon: <i className="ti ti-alert-triangle" style={{ fontSize: 19 }} />, bg: t.redSoft, color: t.red },
-          { label: "Congés en cours", value: activeLeavesCount, sub: "Absences autorisées", icon: <i className="ti ti-plane-departure" style={{ fontSize: 19 }} />, bg: t.amberSoft, color: t.amber },
+          { label: "Membres de l'équipe", value: employes.length, icon: <i className="ti ti-users" style={{ fontSize: 19 }} />, bg: t.blueSoft, color: t.blue },
+          { label: "Enseignants Actifs", value: activeTeachersCount, icon: <i className="ti ti-school" style={{ fontSize: 19 }} />, bg: t.greenSoft, color: t.green },
+          { label: "Absences du mois", value: totalAbsencesMonth, icon: <i className="ti ti-alert-triangle" style={{ fontSize: 19 }} />, bg: t.redSoft, color: t.red },
+          { label: "Congés en cours", value: activeLeavesCount, icon: <i className="ti ti-plane-departure" style={{ fontSize: 19 }} />, bg: t.amberSoft, color: t.amber },
         ].map((card, idx) => (
-          <motion.div key={idx} className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ ...cardStyle, cursor: "pointer" }}>
-            <div className="top">
-              <div className="icon-box" style={{ background: card.bg, color: card.color, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{card.icon}</div>
-              <div>
-                <div className="stat-label" style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{card.label}</div>
-                <div className="stat-value" style={{ fontSize: 21, fontWeight: 700, color: t.text }}>{card.value}</div>
-              </div>
-            </div>
-            <div className="bottom">
-              <div className="trend up" style={{ fontSize: 11, color: t.muted, fontWeight: 500 }}>{card.sub}</div>
+          <motion.div key={idx} className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
+            <div className="icon-box" style={{ background: card.bg, color: card.color }}>{card.icon}</div>
+            <div>
+              <div className="stat-label">{card.label}</div>
+              <div className="stat-value">{card.value}</div>
             </div>
           </motion.div>
         ))}

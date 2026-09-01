@@ -982,43 +982,31 @@ export default function Notes() {
       {/* Stats */}
       <div className="stats-grid">
         <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.blueSoft, color: t.blue }}><i className="ti ti-chart-bar" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Moyenne générale</div>
-              <div className="stat-value">{getGlobalMoyenne()} <span className="unit">/20</span></div>
-              <div className="stat-sub">Toutes les classes confondues</div>
-            </div>
+          <div className="icon-box" style={{ background: t.blueSoft, color: t.blue }}><i className="ti ti-chart-bar" style={{ fontSize: 19 }}></i></div>
+          <div>
+            <div className="stat-label">Moyenne générale</div>
+            <div className="stat-value">{getGlobalMoyenne()} <span className="unit">/20</span></div>
           </div>
         </motion.div>
         <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.greenSoft, color: t.green }}><i className="ti ti-target" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Taux de réussite</div>
-              <div className="stat-value">{Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%</div>
-              <div className="stat-sub">Admis ou Excellents</div>
-            </div>
+          <div className="icon-box" style={{ background: t.greenSoft, color: t.green }}><i className="ti ti-target" style={{ fontSize: 19 }}></i></div>
+          <div>
+            <div className="stat-label">Taux de réussite</div>
+            <div className="stat-value">{Math.round((filtered.length - getDifficultyCount()) / Math.max(1, filtered.length) * 100)}%</div>
           </div>
         </motion.div>
         <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.redSoft, color: t.red }}><i className="ti ti-alert-triangle" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Élèves en difficulté</div>
-              <div className="stat-value">{getDifficultyCount()}</div>
-              <div className="stat-sub">Moyenne &lt; 10 — {Math.round(getDifficultyCount() / Math.max(1, filtered.length) * 100)}% de la sélection</div>
-            </div>
+          <div className="icon-box" style={{ background: t.redSoft, color: t.red }}><i className="ti ti-alert-triangle" style={{ fontSize: 19 }}></i></div>
+          <div>
+            <div className="stat-label">Élèves en difficulté</div>
+            <div className="stat-value">{getDifficultyCount()}</div>
           </div>
         </motion.div>
         <motion.div className="stat-card" whileHover={{ y: -3, boxShadow: t.shadowMd }} whileTap={{ y: 0, scale: 0.98 }} style={{ cursor: "pointer" }}>
-          <div className="top">
-            <div className="icon-box" style={{ background: t.amberSoft, color: t.amber }}><i className="ti ti-award" style={{ fontSize: 19 }}></i></div>
-            <div>
-              <div className="stat-label">Classement</div>
-              <div className="stat-value">Mis à jour</div>
-              <div className="stat-sub">Automatique via Coefficients</div>
-            </div>
+          <div className="icon-box" style={{ background: t.amberSoft, color: t.amber }}><i className="ti ti-award" style={{ fontSize: 19 }}></i></div>
+          <div>
+            <div className="stat-label">Classement</div>
+            <div className="stat-value">Mis à jour</div>
           </div>
         </motion.div>
       </div>

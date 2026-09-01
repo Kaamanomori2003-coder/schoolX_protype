@@ -239,20 +239,20 @@ export default function Emplois() {
       </div>
 
       {/* ── STATS ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         {[
           { icon:"ti-clock",    label:"Cours / semaine", value:`${allCours.length}h`,          c:t.blue,   bg:t.blueSoft  },
           { icon:"ti-book",     label:"Matières",         value:Object.keys(matiereCount).length, c:"#7c3aed", bg:"#f5f3ff" },
           { icon:"ti-calendar", label:"Jours actifs",     value:JOURS.filter(j=>currentEmploi[j]?.some(c=>c&&c!=="Récréation")).length, c:t.green, bg:t.greenSoft },
           { icon:"ti-star",     label:"Matière phare",    value:topMatiere?.[0]||"—",           c:"#d97706", bg:"#fffbeb"  },
         ].map(s => (
-          <div key={s.label} style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"13px 15px", display:"flex", alignItems:"center", gap:11, boxShadow:t.shadow }}>
-            <div style={{ width:34, height:34, borderRadius:8, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <i className={`ti ${s.icon}`} style={{ fontSize:16, color:s.c }} />
+          <div key={s.label} style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:t.shadow }}>
+            <div style={{ width:40, height:40, borderRadius:9, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <i className={`ti ${s.icon}`} style={{ fontSize:19, color:s.c }} />
             </div>
             <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:10, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{s.label}</div>
-              <div style={{ fontSize:14, fontWeight:700, color:t.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.value}</div>
+              <div style={{ fontSize:11, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{s.label}</div>
+              <div style={{ fontSize:21, fontWeight:700, color:t.text, marginTop:3, lineHeight:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.value}</div>
             </div>
           </div>
         ))}

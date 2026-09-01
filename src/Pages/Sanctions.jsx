@@ -63,15 +63,14 @@ const Chip = ({label, c, bg}) => (
   </span>
 );
 
-const StatBox = ({icon,label,value,sub,c=t.blue,bg=t.blueSoft}) => (
+const StatBox = ({icon,label,value,c=t.blue,bg=t.blueSoft}) => (
   <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radius,padding:"16px 18px",display:"flex",alignItems:"center",gap:14,boxShadow:t.shadow}}>
     <div style={{width:40,height:40,borderRadius:9,background:bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
       <i className={`ti ${icon}`} style={{fontSize:19,color:c}} />
     </div>
     <div style={{minWidth:0}}>
       <div style={{fontSize:11,color:t.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".4px"}}>{label}</div>
-      <div style={{fontSize:sub?15:21,fontWeight:700,color:t.text,marginTop:3,lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{value}</div>
-      {sub && <div style={{fontSize:11,color:t.muted,marginTop:2}}>{sub}</div>}
+      <div style={{fontSize:21,fontWeight:700,color:t.text,marginTop:3,lineHeight:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{value}</div>
     </div>
   </div>
 );
@@ -260,7 +259,7 @@ export default function Sanctions({prefillStudentId}) {
   const exclusions  = sanctions.filter(estExclusionEnCours).length;
 
   const parEleve = sanctions.reduce((acc,s)=>({...acc,[s.studentId]:(acc[s.studentId]||0)+1}),{});
-  const [idSurveille, nbSurveille] = Object.entries(parEleve)
+  const [idSurveille] = Object.entries(parEleve)
     .sort((a,b)=>b[1]-a[1])[0] || [null,0];
   const eleveSurveille = idSurveille ? getEleveById(idSurveille) : null;
 
@@ -336,7 +335,7 @@ export default function Sanctions({prefillStudentId}) {
       </div>
 
       {/* ── STATS ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
         <StatBox icon="ti-clock-hour-4"  label="En attente"        value={enAttente}  c={t.amber} bg={t.amberSoft} />
         <StatBox icon="ti-calendar-event"label="Ce mois-ci"        value={ceMois}     c={t.blue}  bg={t.blueSoft}  />
         <StatBox icon="ti-user-off"      label="Exclusions en cours" value={exclusions} c={t.red}   bg={t.redSoft}   />
@@ -344,7 +343,6 @@ export default function Sanctions({prefillStudentId}) {
           icon="ti-alert-octagon"
           label="Élève à surveiller"
           value={eleveSurveille ? getNomComplet(eleveSurveille) : "—"}
-          sub={eleveSurveille ? `${nbSurveille} sanction${nbSurveille>1?"s":""} au dossier` : "Aucune sanction"}
           c={t.orange} bg={t.orangeSoft}
         />
       </div>

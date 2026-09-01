@@ -78,7 +78,11 @@ const resumeDetail = (r) => {
   if (!r) return "";
   const parts = [];
   if (r.status === "retard" && Number(r.retardMin) > 0) parts.push(`${Number(r.retardMin)} min de retard`);
-  if (r.motif) parts.push(r.motif);
+  if (r.status === "retard") {
+    parts.push(r.justifie ? `Retard — Justifié${r.motif ? ` (${r.motif})` : ""}` : "Non justifié");
+  } else if (r.motif) {
+    parts.push(r.motif);
+  }
   if (r.status === "absent") parts.push(r.justifie ? "justifiée" : "non justifiée");
   if (r.note) parts.push(r.note);
   return parts.join(" · ");
@@ -93,15 +97,14 @@ const Chip = ({label, c, bg}) => (
 
 const Divider = () => <div style={{height:1,background:t.border}} />;
 
-const StatBox = ({icon,label,value,sub,c=t.blue,bg=t.blueSoft,fs=21}) => (
+const StatBox = ({icon,label,value,c=t.blue,bg=t.blueSoft}) => (
   <div style={{background:t.surface,border:`1px solid ${t.border}`,borderRadius:t.radius,padding:"16px 18px",display:"flex",alignItems:"center",gap:14,boxShadow:t.shadow}}>
     <div style={{width:40,height:40,borderRadius:9,background:bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
       <i className={`ti ${icon}`} style={{fontSize:19,color:c}} />
     </div>
     <div style={{minWidth:0}}>
       <div style={{fontSize:11,color:t.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:".4px"}}>{label}</div>
-      <div style={{fontSize:fs,fontWeight:700,color:t.text,marginTop:3,lineHeight:1.15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
-      {sub && <div style={{fontSize:11,color:t.muted,marginTop:3}}>{sub}</div>}
+      <div style={{fontSize:21,fontWeight:700,color:t.text,marginTop:3,lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
     </div>
   </div>
 );
@@ -328,7 +331,7 @@ const SaisieRow = ({eleve, row, onChange, ouvert, onToggle, dernier}) => {
                 </div>
               )}
 
-              {row.status === "absent" && (
+              {(row.status === "absent" || row.status === "retard") && (
                 <button onClick={()=>onChange({justifie:!row.justifie})} style={{
                   display:"flex",alignItems:"center",gap:8,alignSelf:"flex-start",
                   padding:"8px 13px",borderRadius:t.radius,cursor:"pointer",fontFamily:t.font,
@@ -351,7 +354,7 @@ const SaisieRow = ({eleve, row, onChange, ouvert, onToggle, dernier}) => {
 /* ─── HISTORIQUE : LIGNE DE SÉANCE ───────────────────────────── */
 const SeanceRow = ({seance, onOuvrir, dernier}) => {
   const c = compteurs(seance.records);
-  const nonJustifiees = seance.records.filter(r=>r.status==="absent" && !r.justifie).length;
+  const nonJustifiees = seance.records.filter(r=>(r.status==="absent" || r.status==="retard") && !r.justifie).length;
 
   return (
     <div onClick={onOuvrir}
@@ -394,7 +397,9 @@ function FicheSeance({seance, onRetour, onJustifier}) {
   const { eleves } = useSchoolData();
   const [tab, setTab] = useState("anomalies");
   const c = compteurs(seance.records);
-  const nonJustifiees = seance.records.filter(r=>r.status==="absent" && !r.justifie).length;
+  const absencesNJ = seance.records.filter(r=>r.status==="absent" && !r.justifie).length;
+  const retardsNJ  = seance.records.filter(r=>r.status==="retard" && !r.justifie).length;
+  const nonJustifiees = absencesNJ + retardsNJ;
   const anomalies = seance.records.filter(r=>r.status!=="present");
   const liste = tab === "anomalies" ? anomalies : seance.records;
 
@@ -414,8 +419,11 @@ function FicheSeance({seance, onRetour, onJustifier}) {
       {nonJustifiees > 0 && (
         <div style={{marginBottom:14}}>
           <Bandeau icon="ti-alert-triangle" c={t.amber} bg={t.amberSoft} border={t.amberMid}
-            titre={`${nonJustifiees} absence${nonJustifiees>1?"s":""} en attente de justificatif`}>
-            Utilisez le bouton « Justifier » sur la ligne de l'élève pour enregistrer le motif communiqué par la famille.
+            titre={`${nonJustifiees} entrée${nonJustifiees>1?"s":""} en attente de justificatif`}>
+            {absencesNJ > 0 && `${absencesNJ} absence${absencesNJ>1?"s":""}`}
+            {absencesNJ > 0 && retardsNJ > 0 && " · "}
+            {retardsNJ > 0 && `${retardsNJ} retard${retardsNJ>1?"s":""}`}
+            {" "}— utilisez « Justifier » sur la ligne de l'élève.
           </Bandeau>
         </div>
       )}
@@ -465,7 +473,7 @@ function FicheSeance({seance, onRetour, onJustifier}) {
             <div>
               <InfoItem icon="ti-calendar-event" label="Date de la séance" value={fmtDate(seance.date)} />
               <InfoItem icon="ti-user-check"     label="Effectif appelé"   value={`${c.present} présent(s) sur ${c.total}`} />
-              <InfoItem icon="ti-file-check"     label="À justifier"       value={nonJustifiees === 0 ? "Aucune absence en attente" : `${nonJustifiees} absence(s)`} />
+              <InfoItem icon="ti-file-check"     label="À justifier"       value={nonJustifiees === 0 ? "Rien en attente" : `${absencesNJ} absence(s), ${retardsNJ} retard(s)`} />
             </div>
           </div>
         </div>
@@ -525,20 +533,24 @@ function FicheSeance({seance, onRetour, onJustifier}) {
 
                 <Chip label={cfg.label} c={cfg.color} bg={cfg.bg} />
 
-                {r.status === "absent" && (
+                {(r.status === "absent" || r.status === "retard") && (
                   r.justifie ? (
                     <span style={{fontSize:11,color:t.green,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
-                      <i className="ti ti-circle-check" style={{fontSize:13}} /> Justifiée
+                      <i className="ti ti-circle-check" style={{fontSize:13}} />
+                      {r.status === "retard" ? `Retard — Justifié${r.motif ? ` (${r.motif})` : ""}` : "Justifiée"}
                     </span>
                   ) : (
-                    <button onClick={()=>onJustifier(seance.id, r.studentId, r.motif)} style={{
-                      display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
-                      border:`1px solid ${t.blueMid}`,borderRadius:t.radius,
-                      background:t.blueSoft,color:t.blue,
-                      fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:t.font,whiteSpace:"nowrap",
-                    }}>
-                      <i className="ti ti-file-check" style={{fontSize:13}} /> Justifier
-                    </button>
+                    <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>
+                      <Chip label="Non justifié" c={t.red} bg={t.redSoft} />
+                      <button onClick={()=>onJustifier(seance.id, r.studentId, r.motif, r.status)} style={{
+                        display:"flex",alignItems:"center",gap:6,padding:"6px 12px",
+                        border:`1px solid ${t.blueMid}`,borderRadius:t.radius,
+                        background:t.blueSoft,color:t.blue,
+                        fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:t.font,whiteSpace:"nowrap",
+                      }}>
+                        <i className="ti ti-file-check" style={{fontSize:13}} /> Justifier
+                      </button>
+                    </div>
                   )
                 )}
               </div>
@@ -619,7 +631,8 @@ function ExclusionModal({exclus, eleves, matiere, date, onCancel, onConfirm}) {
 }
 
 /* ─── MODAL JUSTIFICATION ────────────────────────────────────── */
-function JustifyModal({eleve, motif, setMotif, onCancel, onConfirm}) {
+function JustifyModal({eleve, motif, setMotif, onCancel, onConfirm, statut}) {
+  const estRetard = statut === "retard";
   return (
     <div onClick={onCancel}
       style={{position:"fixed",inset:0,background:"rgba(17,24,39,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:16}}>
@@ -628,7 +641,7 @@ function JustifyModal({eleve, motif, setMotif, onCancel, onConfirm}) {
 
         <div style={{padding:"14px 20px",borderBottom:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
           <div style={{minWidth:0}}>
-            <div style={{fontSize:15,fontWeight:700,color:t.text}}>Justifier l'absence</div>
+            <div style={{fontSize:15,fontWeight:700,color:t.text}}>{estRetard ? "Justifier le retard" : "Justifier l'absence"}</div>
             <div style={{fontSize:12,color:t.muted,marginTop:2}}>{getNomComplet(eleve)}</div>
           </div>
           <button onClick={onCancel}
@@ -641,7 +654,7 @@ function JustifyModal({eleve, motif, setMotif, onCancel, onConfirm}) {
           <div>
             <label style={{fontSize:11,fontWeight:600,color:t.sub,display:"block",marginBottom:6}}>Motif *</label>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-              {MOTIFS_ABSENCE.map(m=>(
+              {(estRetard ? OBS_CHIPS.retard : MOTIFS_ABSENCE).map(m=>(
                 <QuickChip key={m} label={m} actif={motif===m} onClick={()=>setMotif(motif===m?"":m)} />
               ))}
             </div>
@@ -652,7 +665,7 @@ function JustifyModal({eleve, motif, setMotif, onCancel, onConfirm}) {
 
           <Bandeau icon="ti-info-circle" c={t.blue} bg={t.blueSoft} border={t.blueMid}
             titre="Justificatif enregistré côté établissement">
-            L'absence restera visible dans l'historique de la séance, marquée comme justifiée.
+            {estRetard ? "Le retard" : "L'absence"} restera visible dans l'historique de la séance, marqué{estRetard?"":"e"} comme justifié{estRetard?"":"e"}.
           </Bandeau>
 
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}>
@@ -740,7 +753,7 @@ export default function Absences({onNavigate}) {
     return {
       studentId: e.id,
       status: r.status || "present",
-      justifie: r.status === "absent" ? !!r.justifie : false,
+      justifie: (r.status === "absent" || r.status === "retard") ? !!r.justifie : false,
       motif: r.status === "present" ? "" : (r.motif || "").trim(),
       retardMin: r.status === "retard" ? Number(r.retardMin) || 0 : 0,
       note: (r.note || "").trim(),
@@ -783,14 +796,14 @@ export default function Absences({onNavigate}) {
     }
   };
 
-  const openJustify = (recordId, studentId, currentMotif) => {
-    setJustifyModal({ recordId, studentId });
+  const openJustify = (recordId, studentId, currentMotif, status) => {
+    setJustifyModal({ recordId, studentId, status });
     setMotif(currentMotif || "");
   };
 
   const confirmJustify = () => {
     justifyAbsence(justifyModal.recordId, justifyModal.studentId, motif);
-    showToast("Absence justifiée", "success", motif);
+    showToast(justifyModal.status === "retard" ? "Retard justifié" : "Absence justifiée", "success", motif);
     setJustifyModal(null);
   };
 
@@ -806,17 +819,17 @@ export default function Absences({onNavigate}) {
 
   // ── Stats globales (sur l'historique) ──
   const stats = useMemo(() => {
-    let total=0, present=0, absent=0, retard=0, absentsNonJustifies=0;
+    let total=0, present=0, absent=0, retard=0, absentsNonJustifies=0, retardsNonJustifies=0;
     const parEleve = {};
     absencesHistory.forEach(rec => rec.records.forEach(r => {
       total++;
       if (r.status === "present") present++;
       if (r.status === "absent") { absent++; if (!r.justifie) absentsNonJustifies++; parEleve[r.studentId] = (parEleve[r.studentId]||0)+1; }
-      if (r.status === "retard") retard++;
+      if (r.status === "retard") { retard++; if (!r.justifie) retardsNonJustifies++; }
     }));
     const tauxPresence = total ? Math.round((present/total)*100) : 100;
     const eleveAlerte = Object.entries(parEleve).sort((a,b)=>b[1]-a[1])[0];
-    return { tauxPresence, absent, retard, absentsNonJustifies, eleveAlerte };
+    return { tauxPresence, absent, retard, absentsNonJustifies, retardsNonJustifies, eleveAlerte };
   }, [absencesHistory]);
 
   const eleveSurveille = stats.eleveAlerte
@@ -832,6 +845,7 @@ export default function Absences({onNavigate}) {
       <FicheSeance seance={seanceSel} onRetour={()=>setSeanceId(null)} onJustifier={openJustify} />
       {justifyModal && (
         <JustifyModal eleve={eleveJustifie} motif={motif} setMotif={setMotif}
+          statut={justifyModal.status}
           onCancel={()=>setJustifyModal(null)} onConfirm={confirmJustify} />
       )}
     </>
@@ -851,17 +865,16 @@ export default function Absences({onNavigate}) {
       </div>
 
       {/* ── STATS ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
         <StatBox icon="ti-checkbox" label="Taux de présence" value={`${stats.tauxPresence}%`}
-          sub="Sur l'historique enregistré" c={t.green} bg={t.greenSoft} />
+          c={t.green} bg={t.greenSoft} />
         <StatBox icon="ti-alert-triangle" label="Absences non justifiées" value={stats.absentsNonJustifies}
-          sub={`${stats.absent} absence(s) au total`} c={t.red} bg={t.redSoft} />
-        <StatBox icon="ti-clock" label="Retards enregistrés" value={stats.retard}
-          sub={`${absencesHistory.length} séance(s) saisie(s)`} c={t.amber} bg={t.amberSoft} />
+          c={t.red} bg={t.redSoft} />
+        <StatBox icon="ti-clock" label="Retards non justifiés" value={stats.retardsNonJustifies}
+          c={t.amber} bg={t.amberSoft} />
         <StatBox icon="ti-user-exclamation" label="Élève à surveiller"
           value={eleveSurveille ? getNomComplet(eleveSurveille) : "—"}
-          sub={stats.eleveAlerte ? `${stats.eleveAlerte[1]} absence(s)` : "Aucune alerte"}
-          c={t.purple} bg={t.purpleSoft} fs={15} />
+          c={t.purple} bg={t.purpleSoft} />
       </div>
 
       {/* ── TABS ── */}
@@ -1008,6 +1021,7 @@ export default function Absences({onNavigate}) {
       {/* ═══ MODAL JUSTIFICATION ═══ */}
       {justifyModal && (
         <JustifyModal eleve={eleveJustifie} motif={motif} setMotif={setMotif}
+          statut={justifyModal.status}
           onCancel={()=>setJustifyModal(null)} onConfirm={confirmJustify} />
       )}
 

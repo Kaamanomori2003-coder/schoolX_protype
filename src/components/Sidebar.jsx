@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import "./Sidebar.css";
 
 const menuGroups = [
   {
@@ -52,8 +53,31 @@ const bottomItems = [
 
 export default function Sidebar({ onNavigate, activePage, collapsed, setCollapsed}) {
   const [hovered,   setHovered]   = useState(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+  const navRef = useRef(null);
 
   const W = collapsed ? 64 : 240;
+
+  const updateOverflow = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const overflow = el.scrollHeight > el.clientHeight + 4;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    setHasMoreBelow(overflow && !atBottom);
+  }, []);
+
+  useEffect(() => {
+    updateOverflow();
+    const el = navRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateOverflow);
+    ro.observe(el);
+    window.addEventListener("resize", updateOverflow);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateOverflow);
+    };
+  }, [updateOverflow, collapsed]);
 
   const NavItem = ({ label, icon }) => {
     const isActive = activePage === label;
@@ -159,18 +183,33 @@ export default function Sidebar({ onNavigate, activePage, collapsed, setCollapse
       </div>
 
       {/* ── NAV PRINCIPALE ── */}
-      <nav style={{ flex:1, overflowY:"auto", scrollbarWidth:"none", display:"flex", flexDirection:"column" }}>
-        <style>{`.sidebar-nav::-webkit-scrollbar{display:none}`}</style>
-
-        {menuGroups.map((grp) => (
-          <div key={grp.group}>
-            <GroupLabel label={grp.group} />
-            {grp.items.map(({ label, icon }) => (
-              <NavItem key={label} label={label} icon={icon} />
-            ))}
-          </div>
-        ))}
-      </nav>
+      <div style={{ flex:1, minHeight:0, position:"relative", display:"flex", flexDirection:"column" }}>
+        <nav
+          ref={navRef}
+          className="sidebar-nav"
+          onScroll={updateOverflow}
+          style={{ flex:1, minHeight:0, overflowY:"auto", display:"flex", flexDirection:"column" }}
+        >
+          {menuGroups.map((grp) => (
+            <div key={grp.group}>
+              <GroupLabel label={grp.group} />
+              {grp.items.map(({ label, icon }) => (
+                <NavItem key={label} label={label} icon={icon} />
+              ))}
+            </div>
+          ))}
+        </nav>
+        {hasMoreBelow && (
+          <div
+            aria-hidden
+            style={{
+              position:"absolute", left:0, right:0, bottom:0, height:30,
+              pointerEvents:"none",
+              background:"linear-gradient(to bottom, transparent, #1230a8)",
+            }}
+          />
+        )}
+      </div>
 
       {/* ── SÉPARATEUR ── */}
       <div style={{ height:1, background:"rgba(255,255,255,0.1)", margin:"8px 2px" }} />

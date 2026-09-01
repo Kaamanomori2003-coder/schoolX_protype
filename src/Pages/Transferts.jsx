@@ -479,7 +479,7 @@ export default function Transferts() {
       </div>
 
       {/* ── STATS ── */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
         <StatBox icon="ti-clock-hour-4" label="Demandes en cours"  value={enCours}         c={t.amber}  bg={t.amberSoft}  />
         <StatBox icon="ti-logout"       label="Sortants finalisés" value={sortants}        c={t.purple} bg={t.purpleSoft} />
         <StatBox icon="ti-login"        label="Entrants finalisés" value={entrants}        c={t.blue}   bg={t.blueSoft}   />

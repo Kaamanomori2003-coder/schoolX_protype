@@ -67,14 +67,12 @@
 }
 .btn-primary:hover { opacity: .88; }
 
-/* Stats Cards */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
-@media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .stats-grid { grid-template-columns: 1fr; } }
+/* Stats Cards — même format que Gestion des élèves */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat-card {
   background: #ffffff; border-radius: 10px; padding: 16px 18px; border: 1px solid #eaecf0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between;
-  min-width: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  display: flex; align-items: center; gap: 14px; min-width: 0;
 }
 .stat-card .top { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .stat-card .top > div { min-width: 0; }
@@ -82,11 +80,11 @@
   width: 40px; height: 40px; border-radius: 9px; display: flex;
   align-items: center; justify-content: center; flex-shrink: 0;
 }
-.stat-card .stat-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
-.stat-card .stat-value { font-size: 21px; font-weight: 700; color: #111827; line-height: 1.1; }
+.stat-card .stat-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.stat-card .stat-value { font-size: 21px; font-weight: 700; color: #111827; line-height: 1; margin-top: 3px; }
 .stat-card .stat-value .unit { font-size: 13px; font-weight: 500; color: #9ca3af; }
-.stat-card .stat-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
-.stat-card .bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; min-width: 0; }
+.stat-card .stat-sub { display: none; }
+.stat-card .bottom { display: none; }
 .stat-card .trend { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; }
 .stat-card .trend.up { color: #059669; }
 .stat-card .trend.down { color: #dc2626; }

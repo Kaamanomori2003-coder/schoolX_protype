@@ -102,13 +102,13 @@ const Chip = ({ label, c, bg }) => (
 );
 
 const StatBox = ({ icon, label, value, c = t.blue, bg = t.blueSoft }) => (
-  <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "13px 15px", display: "flex", alignItems: "center", gap: 11, boxShadow: t.shadow }}>
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      <i className={`ti ${icon}`} style={{ fontSize: 17, color: c }} />
+  <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: t.shadow }}>
+    <div style={{ width: 40, height: 40, borderRadius: 9, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <i className={`ti ${icon}`} style={{ fontSize: 19, color: c }} />
     </div>
     <div>
-      <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: t.text, marginTop: 2, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{label}</div>
+      <div style={{ fontSize: 21, fontWeight: 700, color: t.text, marginTop: 3, lineHeight: 1 }}>{value}</div>
     </div>
   </div>
 );
@@ -502,7 +502,7 @@ export default function Messages() {
       </div>
 
       {/* STATS */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 20 }}>
         <StatBox icon="ti-send" label="Envoyés" value={totalEnvoyes} c={t.blue} bg={t.blueSoft} />
         <StatBox icon="ti-eye" label="Lus" value={totalLus} c={t.green} bg={t.greenSoft} />
         <StatBox icon="ti-clock" label="Non lus" value={totalNonLu} c={t.amber} bg={t.amberSoft} />

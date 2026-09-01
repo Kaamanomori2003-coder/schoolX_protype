@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./Paiements.css";
 import { CLASSES, MODES_PAIEMENT, TRANCHES, TYPES_PAIEMENT, MOIS_LIST, TRANCHE_MONTANT, INITIAL_PAIEMENTS, getStatusInfo, REVENUS_MOIS } from "./paiementsData";
+import { getNomComplet } from "./studentsData";
 import ConfirmModal from "../components/ConfirmModal";
 import { useToast } from "../context/ToastContext";
+import { useSchoolData } from "../context/SchoolDataContext";
 import { t } from "../theme";
 
 const fmt = n => n.toLocaleString("fr-FR");
@@ -26,18 +28,209 @@ function useOutsideClick(ref, cb) {
   }, [ref, cb]);
 }
 
+/* Même chargement CDN que Notes.jsx (bulletins) */
+const loadJsPDF = () => new Promise((resolve) => {
+  if (window.jspdf) return resolve(window.jspdf.jsPDF);
+  const script = document.createElement("script");
+  script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  script.onload = () => resolve(window.jspdf.jsPDF);
+  document.head.appendChild(script);
+});
+
+const numeroRecu = (p) => p.numeroRecu || p.id;
+
+const downloadRecuPdf = (p) => {
+  loadJsPDF().then((JsPDF) => {
+    const doc = new JsPDF({ unit: "mm", format: "a5" });
+    const pageWidth = 148;
+    const marginX = 12;
+    let y = 16;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(37, 99, 235);
+    doc.text("SchoolX", marginX, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text("Lycée Donka — Conakry, Guinée", marginX, y + 5);
+    doc.setTextColor(17, 24, 39);
+    doc.setFontSize(9);
+    doc.text(`Émis le ${new Date().toLocaleDateString("fr-FR")}`, pageWidth - marginX, y, { align: "right" });
+    y += 10;
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.6);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(17, 24, 39);
+    doc.text("REÇU DE PAIEMENT", pageWidth / 2, y, { align: "center" });
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`N° ${numeroRecu(p)}`, pageWidth / 2, y, { align: "center" });
+    y += 8;
+
+    doc.setDrawColor(234, 236, 240);
+    doc.setFillColor(247, 248, 250);
+    doc.roundedRect(marginX, y, pageWidth - marginX * 2, 52, 2, 2, "F");
+
+    const infoY = y + 7;
+    const col1 = marginX + 4;
+    const col2 = marginX + 64;
+    const infoLine = (label, value, x, yy) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(107, 114, 128);
+      doc.text(label, x, yy);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(17, 24, 39);
+      doc.text(String(value ?? "—"), x, yy + 4);
+    };
+    infoLine("Élève", p.eleve, col1, infoY);
+    infoLine("Classe", p.classe, col2, infoY);
+    infoLine("Tranche", p.tranche, col1, infoY + 14);
+    infoLine("Date", p.date, col2, infoY + 14);
+    infoLine("Mode de paiement", p.mode, col1, infoY + 28);
+    infoLine("N° de reçu", numeroRecu(p), col2, infoY + 28);
+    y += 58;
+
+    doc.setFillColor(239, 246, 255);
+    doc.roundedRect(marginX, y, pageWidth - marginX * 2, 16, 2, 2, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(107, 114, 128);
+    doc.text("Montant payé", marginX + 4, y + 6);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`${(p.montant || 0).toLocaleString("fr-FR")} GNF`, pageWidth - marginX - 4, y + 11, { align: "right" });
+    y += 24;
+
+    doc.setDrawColor(209, 213, 219);
+    doc.line(marginX, y, marginX + 50, y);
+    doc.line(pageWidth - marginX - 50, y, pageWidth - marginX, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(107, 114, 128);
+    doc.text("Cachet de l'établissement", marginX + 25, y + 5, { align: "center" });
+    doc.text("Signature du parent", pageWidth - marginX - 25, y + 5, { align: "center" });
+
+    doc.setFontSize(7);
+    doc.setTextColor(156, 163, 175);
+    doc.text("Document remis au parent — généré par SchoolX", pageWidth / 2, 200, { align: "center" });
+
+    doc.save(`Recu_${String(p.eleve).replace(/\s+/g, "_")}_${numeroRecu(p)}.pdf`);
+  });
+};
+
+function RecuModal({ paiement: p, onClose, onPrint, onPdf }) {
+  const rows = [
+    { label: "Élève", value: p.eleve },
+    { label: "Classe", value: p.classe },
+    { label: "Tranche", value: p.tranche },
+    { label: "Mode de paiement", value: p.mode },
+    { label: "Date", value: p.date },
+    { label: "N° de reçu", value: numeroRecu(p) },
+  ];
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1300 }}>
+      <motion.div initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .96 }} onClick={e => e.stopPropagation()}
+        style={{ background: t.surface, borderRadius: t.radiusLg, width: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", fontFamily: t.font, color: t.text }}>
+        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${t.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 9, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="ti ti-receipt" style={{ fontSize: 19, color: t.blue }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: t.text }}>Reçu de paiement</h2>
+              <span style={{ fontSize: 11.5, color: t.muted, fontWeight: 500 }}>À remettre au parent</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: t.bg, border: "none", color: t.sub, width: 30, height: 30, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <i className="ti ti-x" style={{ fontSize: 15 }} />
+          </button>
+        </div>
+        <div style={{ padding: "22px" }}>
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.blue }}>SchoolX — Lycée Donka</div>
+            <div style={{ fontSize: 11, color: t.muted, marginTop: 2 }}>Conakry, Guinée</div>
+            <div style={{ display: "inline-block", marginTop: 10, fontSize: 11.5, fontWeight: 700, color: t.blue, background: t.blueSoft, border: `1px solid ${t.blueMid}`, padding: "3px 10px", borderRadius: 6 }}>
+              N° {numeroRecu(p)}
+            </div>
+          </div>
+          <div style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "4px 16px 8px", marginBottom: 14 }}>
+            {rows.map(r => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: `1px solid ${t.border}` }}>
+                <span style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".3px" }}>{r.label}</span>
+                <span style={{ fontSize: 13, color: t.text, fontWeight: 600, textAlign: "right" }}>{r.value || "—"}</span>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "12px 0 6px" }}>
+              <span style={{ fontSize: 11, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".3px" }}>Montant payé</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: t.blue }}>{(p.montant || 0).toLocaleString("fr-FR")} <span style={{ fontSize: 12, color: t.muted, fontWeight: 500 }}>GNF</span></span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => onPrint(p)} style={{ flex: 1, padding: 10, border: `1px solid ${t.border}`, borderRadius: t.radius, background: t.surface, fontSize: 12.5, fontWeight: 500, cursor: "pointer", color: t.sub, fontFamily: t.font, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <i className="ti ti-printer" style={{ fontSize: 15 }} /> Imprimer
+            </button>
+            <button onClick={() => onPdf(p)} style={{ flex: 1, padding: 10, border: "none", borderRadius: t.radius, background: t.blue, color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: t.font, boxShadow: "0 2px 8px rgba(37,99,235,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <i className="ti ti-download" style={{ fontSize: 15 }} /> Télécharger PDF
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function PayModal({ paiement, onClose, onSave }) {
   const { showToast } = useToast();
+  const { eleves } = useSchoolData();
+  const elevesActifs = eleves.filter(s => s.status === "Actif");
   const isEdit = !!paiement.id;
+  const matched = elevesActifs.find(s => getNomComplet(s) === (paiement.eleve || ""));
   const [form, setForm] = useState(isEdit ? paiement : {
-    eleve: "", classe: "Terminale A", typePaiement: "Par tranche", tranche: "Tranche 1", mois: "Octobre", montant: "",
+    eleve: "", classe: "", typePaiement: "Par tranche", tranche: "Tranche 1", mois: "Octobre", montant: "",
     date: new Date().toLocaleDateString("fr-FR"), mode: "Espèces"
   });
   const [errors, setErrors] = useState({});
+  const [manual, setManual] = useState(isEdit && !matched);
+  const [query, setQuery] = useState(paiement.eleve || "");
+  const [openList, setOpenList] = useState(false);
+  const [selectedId, setSelectedId] = useState(matched ? matched.id : "");
+  const searchRef = useRef();
+  useOutsideClick(searchRef, () => setOpenList(false));
+
+  const classOptions = CLASSES.includes(form.classe) || !form.classe ? CLASSES : [form.classe, ...CLASSES];
+  const filteredEleves = elevesActifs.filter(s => {
+    const nom = getNomComplet(s).toLowerCase();
+    const q = query.toLowerCase().trim();
+    return !q || nom.includes(q) || s.classe.toLowerCase().includes(q);
+  });
+
+  const pickEleve = (s) => {
+    const nom = getNomComplet(s);
+    setSelectedId(s.id);
+    setQuery(nom);
+    setForm(f => ({ ...f, eleve: nom, classe: s.classe }));
+    setErrors(ev => ({ ...ev, eleve: undefined }));
+    setOpenList(false);
+  };
 
   const validate = () => {
     const errs = {};
-    if (!form.eleve.trim()) errs.eleve = "Le nom de l'élève est requis";
+    if (manual) {
+      if (!form.eleve.trim()) errs.eleve = "Le nom de l'élève est requis";
+      if (!form.classe) errs.classe = "La classe est requise";
+    } else if (!selectedId || !form.eleve.trim()) {
+      errs.eleve = "Sélectionnez un élève dans la liste";
+    }
     const m = parseInt(form.montant);
     if (!form.montant || isNaN(m) || m <= 0) errs.montant = "Le montant doit être supérieur à 0";
     if (!form.date || !form.date.trim()) errs.date = "La date est requise";
@@ -53,10 +246,14 @@ function PayModal({ paiement, onClose, onSave }) {
     else if (m > 0) stat = "Partiellement payé";
 
     const labelTranche = form.typePaiement === "Par mois" ? `Mois : ${form.mois || "Octobre"}` : form.tranche;
+    const recu = form.numeroRecu || form.id || `REC-${Date.now()}`;
 
     onSave({
       ...form,
-      id: form.id || `P${Date.now()}`,
+      id: form.id || recu,
+      numeroRecu: recu,
+      eleve: form.eleve.trim(),
+      classe: form.classe || CLASSES[0],
       tranche: labelTranche,
       montant: m,
       status: stat,
@@ -68,6 +265,13 @@ function PayModal({ paiement, onClose, onSave }) {
   };
 
   const errStyle = { color: t.red, fontSize: 11, marginTop: 3 };
+  const fieldStyle = (key, extra) => ({
+    width: "100%", padding: "9px 12px",
+    border: `1px solid ${errors[key] ? t.red : t.border}`,
+    borderRadius: t.radius, outline: "none", fontSize: 13,
+    fontFamily: t.font, color: t.text, background: t.surface,
+    boxSizing: "border-box", ...extra
+  });
 
   const F = (label, key, type, opts) => {
     const isRequired = label.includes("*");
@@ -78,16 +282,16 @@ function PayModal({ paiement, onClose, onSave }) {
         {labelText}
         {isRequired && <span style={{ color: t.red, marginLeft: 2 }}>*</span>}
       </label>
-      {opts ? <select value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ width: "100%", padding: "9px 12px", border: `1px solid ${errors[key]?t.red:t.border}`, borderRadius: t.radius, outline: "none", fontSize: 13, fontFamily: t.font, color: t.text, background: t.surface, cursor: "pointer" }}>{opts.map(o=><option key={o}>{o}</option>)}</select>
-        : <input type={type||"text"} value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ width: "100%", padding: "9px 12px", border: `1px solid ${errors[key]?t.red:t.border}`, borderRadius: t.radius, outline: "none", fontSize: 13, boxSizing: "border-box", fontFamily: t.font, fontWeight: key==="montant"?700:400, color: key==="montant"?t.blue:t.text }}/>}
+      {opts ? <select value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ ...fieldStyle(key), cursor: "pointer" }}>{opts.map(o=><option key={o}>{o}</option>)}</select>
+        : <input type={type||"text"} value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value});setErrors(ev=>({...ev,[key]:undefined}));}} style={{ ...fieldStyle(key), fontWeight: key==="montant"?700:400, color: key==="montant"?t.blue:t.text }}/>}
       {errors[key] && <p style={errStyle}>{errors[key]}</p>}
     </div>
     );
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
-      <motion.div initial={{opacity:0,scale:.95}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:.95}} className="modal-content" onClick={e=>e.stopPropagation()} style={{ background: t.surface, borderRadius: t.radiusLg, width: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", fontFamily: t.font, color: t.text }}>
+    <div className="modal-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200, overflowY: "auto", padding: 24 }}>
+      <motion.div initial={{opacity:0,scale:.95}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:.95}} className="modal-content" onClick={e=>e.stopPropagation()} style={{ background: t.surface, borderRadius: t.radiusLg, width: 460, overflow: "visible", boxShadow: "0 20px 60px rgba(0,0,0,0.18)", fontFamily: t.font, color: t.text }}>
         <div style={{ background: t.surface, borderBottom: `1px solid ${t.border}`, padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <div style={{ width: 40, height: 40, borderRadius: 9, background: t.blueSoft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -102,10 +306,68 @@ function PayModal({ paiement, onClose, onSave }) {
             <i className="ti ti-x" style={{ fontSize: 15 }} />
           </button>
         </div>
-        <div className="modal-body" style={{ padding: "22px", maxHeight: "75vh", overflowY: "auto" }}>
-          {F("Nom de l'élève *","eleve")}
+        <div className="modal-body" style={{ padding: "22px", maxHeight: "75vh", overflow: openList ? "visible" : "auto" }}>
+          {manual ? (
+            <>
+              {F("Nom de l'élève *","eleve")}
+              <button type="button" onClick={() => { setManual(false); setErrors(ev => ({ ...ev, eleve: undefined })); }}
+                style={{ background: "none", border: "none", padding: 0, margin: "-4px 0 12px", fontSize: 12, fontWeight: 600, color: t.blue, cursor: "pointer", fontFamily: t.font }}>
+                ← Rechercher un élève existant
+              </button>
+            </>
+          ) : (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 11, color: t.sub }}>
+                Élève <span style={{ color: t.red, marginLeft: 2 }}>*</span>
+              </label>
+              <div ref={searchRef} style={{ position: "relative" }}>
+                <i className="ti ti-search" style={{ position: "absolute", left: 12, top: 12, color: t.muted, fontSize: 14, pointerEvents: "none" }} />
+                <input
+                  type="text"
+                  value={query}
+                  placeholder="Rechercher un élève (nom + classe)..."
+                  onChange={e => {
+                    setQuery(e.target.value);
+                    setSelectedId("");
+                    setForm(f => ({ ...f, eleve: "", classe: "" }));
+                    setErrors(ev => ({ ...ev, eleve: undefined }));
+                    setOpenList(true);
+                  }}
+                  onFocus={() => setOpenList(true)}
+                  style={{ ...fieldStyle("eleve"), paddingLeft: 34 }}
+                />
+                {openList && (
+                  <div style={{ position: "absolute", left: 0, right: 0, top: "calc(100% + 4px)", background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radius, boxShadow: t.shadowMd, maxHeight: 220, overflowY: "auto", zIndex: 20 }}>
+                    {filteredEleves.length === 0 ? (
+                      <div style={{ padding: "12px 14px", fontSize: 12, color: t.muted }}>Aucun élève trouvé</div>
+                    ) : filteredEleves.map(s => (
+                      <button key={s.id} type="button" className="pay-eleve-opt" onClick={() => pickEleve(s)}
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 12px", border: "none", background: selectedId === s.id ? t.blueSoft : "transparent", cursor: "pointer", fontFamily: t.font, fontSize: 13, color: t.text }}>
+                        <span style={{ fontWeight: 600 }}>{getNomComplet(s)}</span>
+                        <span style={{ color: t.sub }}> — {s.classe}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {errors.eleve && <p style={errStyle}>{errors.eleve}</p>}
+              <button type="button" onClick={() => { setManual(true); setSelectedId(""); setErrors(ev => ({ ...ev, eleve: undefined })); setForm(f => ({ ...f, eleve: f.eleve || query, classe: f.classe || CLASSES[0] })); }}
+                style={{ background: "none", border: "none", padding: 0, marginTop: 8, fontSize: 12, fontWeight: 600, color: t.blue, cursor: "pointer", fontFamily: t.font }}>
+                Élève non trouvé ? Saisir manuellement
+              </button>
+            </div>
+          )}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            {F("Classe","classe",null,CLASSES)}
+            {manual
+              ? F("Classe *","classe",null,classOptions)
+              : (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: "block", marginBottom: 5, fontWeight: 600, fontSize: 11, color: t.sub }}>Classe</label>
+                  <input value={form.classe || ""} readOnly placeholder="Pré-remplie à la sélection"
+                    style={{ ...fieldStyle("classe"), background: t.bg, color: form.classe ? t.text : t.muted, cursor: "default" }} />
+                </div>
+              )
+            }
             {F("Type de paiement","typePaiement",null,TYPES_PAIEMENT)}
           </div>
           <div style={{marginBottom: 12}}>
@@ -160,15 +422,46 @@ const ActionBtn = ({ icon, label, primary, c, bg, border, onClick }) => (
   </button>
 );
 
-/* ── Fiche détaillée d'une transaction (page pleine, lecture seule) ── */
-function FichePaiement({ paiement: p, onRetour, onEdit, onDelete, onPrint }) {
-  const si = getStatusInfo(p.status);
-  const initiales = p.eleve.split(" ").slice(0, 2).map(w => w[0]).join("");
+const parseFrDate = (s) => {
+  if (!s || s === "-") return 0;
+  const [d, m, y] = String(s).split("/");
+  return new Date(Number(y), Number(m) - 1, Number(d)).getTime() || 0;
+};
+
+const statutTranche = (paye) => {
+  if (paye >= TRANCHE_MONTANT) return { label: "Payée", ...getStatusInfo("Payé") };
+  if (paye > 0) return { label: "Partiellement payée", ...getStatusInfo("Partiellement payé") };
+  return { label: "Non payée", ...getStatusInfo("Impayé") };
+};
+
+const buildSituation = (historique) => {
+  const totalDu = TRANCHES.length * TRANCHE_MONTANT;
+  const totalPaye = historique.reduce((a, p) => a + (p.montant || 0), 0);
+  const restant = Math.max(0, totalDu - totalPaye);
+  const tranches = TRANCHES.map(tr => {
+    const items = historique.filter(p => p.tranche === tr);
+    const paye = items.reduce((a, p) => a + (p.montant || 0), 0);
+    return { name: tr, paye, items, ...statutTranche(paye) };
+  });
+  return { totalDu, totalPaye, restant, tranches };
+};
+
+/* ── Situation financière d'un élève (ouverte depuis Transactions récentes) ── */
+function FichePaiement({ paiement: p, historique, onRetour, onEdit, onDelete, onPrint }) {
+  const liste = (historique || [p]).slice().sort((a, b) => parseFrDate(b.date) - parseFrDate(a.date));
+  const sit = buildSituation(liste);
+  const initiales = (p.eleve || "?").split(" ").slice(0, 2).map(w => w[0]).join("");
+  const pct = sit.totalDu > 0 ? Math.round((sit.totalPaye / sit.totalDu) * 100) : 0;
+
+  const kpis = [
+    { label: "Total dû (année)", value: sit.totalDu, c: t.sub, bg: t.bg, icon: "ti-file-invoice" },
+    { label: "Déjà payé", value: sit.totalPaye, c: t.green, bg: t.greenSoft, icon: "ti-circle-check" },
+    { label: "Reste à payer", value: sit.restant, c: sit.restant > 0 ? t.red : t.green, bg: sit.restant > 0 ? t.redSoft : t.greenSoft, icon: "ti-wallet" },
+  ];
 
   return (
     <div style={{ fontFamily: t.font, color: t.text, maxWidth: 860, margin: "0 auto" }}>
 
-      {/* ── TOP BAR ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <ActionBtn icon="ti-arrow-left" label="Retour" primary onClick={onRetour} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -178,7 +471,6 @@ function FichePaiement({ paiement: p, onRetour, onEdit, onDelete, onPrint }) {
         </div>
       </div>
 
-      {/* ── HERO CARD ── */}
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden", marginBottom: 14 }}>
         <div style={{ padding: "16px 18px 14px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 18, flexWrap: "wrap", marginBottom: 18 }}>
@@ -190,57 +482,110 @@ function FichePaiement({ paiement: p, onRetour, onEdit, onDelete, onPrint }) {
               fontSize: 18, fontWeight: 700, color: t.blue,
               boxShadow: "0 2px 10px rgba(37,99,235,0.15)",
             }}>{initiales}</div>
-
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: t.text, lineHeight: 1.2 }}>{p.eleve}</h2>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                <span style={{
-                  fontSize: 11.5, fontWeight: 700, color: t.blue,
-                  background: t.blueSoft, border: `1px solid ${t.blueMid}`,
-                  padding: "3px 10px", borderRadius: 6, letterSpacing: ".3px",
-                }}>
-                  <i className="ti ti-receipt" style={{ marginRight: 5, fontSize: 11 }} />
-                  Reçu n° {p.id}
-                </span>
                 <Chip label={p.classe} c={t.sub} bg={t.border} />
-                <Chip label={p.tranche} c={t.blue} bg={t.blueSoft} />
-                <Chip label={p.status} c={si.color} bg={si.bg} />
+                <Chip label={`${liste.length} paiement${liste.length > 1 ? "s" : ""}`} c={t.blue} bg={t.blueSoft} />
+                <Chip label={`${pct}% réglé`} c={pct >= 100 ? t.green : t.amber} bg={pct >= 100 ? t.greenSoft : t.amberSoft} />
               </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: t.bg, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "12px 16px" }}>
-            <div>
-              <div style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>Montant réglé</div>
-              <div style={{ fontSize: 21, fontWeight: 700, color: t.text, marginTop: 3, lineHeight: 1 }}>{p.montant.toLocaleString()} <span style={{ fontSize: 13, color: t.muted, fontWeight: 500 }}>GNF</span></div>
-            </div>
-            <Chip label={p.status} c={si.color} bg={si.bg} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
+            {kpis.map(k => (
+              <div key={k.label} style={{ background: k.bg, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "12px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                  <i className={`ti ${k.icon}`} style={{ fontSize: 14, color: k.c }} />
+                  <span style={{ fontSize: 10, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".4px" }}>{k.label}</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: k.c, lineHeight: 1 }}>
+                  {k.value.toLocaleString("fr-FR")} <span style={{ fontSize: 12, color: t.muted, fontWeight: 500 }}>GNF</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ── DÉTAIL DE LA TRANSACTION ── */}
+      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${t.border}` }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
+            <i className="ti ti-layers-subtract" style={{ fontSize: 14, color: t.muted, marginRight: 7 }} />
+            Détail par tranche
+          </span>
+        </div>
+        <div style={{ padding: "8px 18px 16px" }}>
+          {sit.tranches.map(tr => {
+            const pctTr = Math.min(100, Math.round((tr.paye / TRANCHE_MONTANT) * 100));
+            return (
+              <div key={tr.name} style={{ padding: "12px 0", borderBottom: `1px solid ${t.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{tr.name}</span>
+                    <Chip label={tr.label} c={tr.color} bg={tr.bg} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>
+                    {tr.paye.toLocaleString("fr-FR")} <span style={{ color: t.muted, fontWeight: 500 }}>/ {TRANCHE_MONTANT.toLocaleString("fr-FR")} GNF</span>
+                  </span>
+                </div>
+                <div style={{ height: 6, background: t.border, borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pctTr}%`, background: tr.paye >= TRANCHE_MONTANT ? t.green : tr.paye > 0 ? t.amber : t.border, borderRadius: 99 }} />
+                </div>
+                {tr.label === "Partiellement payée" && (
+                  <div style={{ fontSize: 11.5, color: t.amber, marginTop: 6 }}>
+                    {tr.paye.toLocaleString("fr-FR")} GNF réglés — reste {(TRANCHE_MONTANT - tr.paye).toLocaleString("fr-FR")} GNF sur cette tranche
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: t.radiusLg, boxShadow: t.shadow, overflow: "hidden" }}>
         <div style={{ padding: "14px 18px", borderBottom: `1px solid ${t.border}` }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: t.text }}>
-            <i className="ti ti-file-invoice" style={{ fontSize: 14, color: t.muted, marginRight: 7 }} />
-            Détail de la transaction
+            <i className="ti ti-history" style={{ fontSize: 14, color: t.muted, marginRight: 7 }} />
+            Historique des paiements
           </span>
         </div>
-        <div style={{ padding: "6px 18px 16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: "0 32px" }}>
-            <div>
-              <InfoItem icon="ti-receipt" label="Référence" value={p.id} />
-              <InfoItem icon="ti-school" label="Classe" value={p.classe} />
-              <InfoItem icon="ti-list-details" label="Tranche" value={p.tranche} />
+        {liste.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: t.muted, fontSize: 13 }}>Aucun paiement enregistré</div>
+        ) : liste.map((el, i) => {
+          const st = getStatusInfo(el.status);
+          return (
+            <div key={el.id} style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 18px",
+              borderBottom: i < liste.length - 1 ? `1px solid ${t.border}` : "none",
+              background: el.id === p.id ? t.bg : "transparent",
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{el.tranche}</span>
+                  <Chip label={el.status} c={st.color} bg={st.bg} />
+                </div>
+                <div style={{ fontSize: 11.5, color: t.muted, marginTop: 3 }}>
+                  {el.date} · {el.mode} · n° {numeroRecu(el)}
+                </div>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.text, whiteSpace: "nowrap" }}>
+                {(el.montant || 0).toLocaleString("fr-FR")} GNF
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button title="Reçu" onClick={() => onPrint(el)} style={{ background: t.blueSoft, color: t.blue, border: `1px solid ${t.blueMid}`, borderRadius: t.radius, padding: "5px 8px", cursor: "pointer", display: "flex" }}>
+                  <i className="ti ti-receipt" style={{ fontSize: 14 }} />
+                </button>
+                <button title="Modifier" onClick={() => onEdit(el)} style={{ background: t.surface, color: t.sub, border: `1px solid ${t.border}`, borderRadius: t.radius, padding: "5px 8px", cursor: "pointer", display: "flex" }}>
+                  <i className="ti ti-pencil" style={{ fontSize: 14 }} />
+                </button>
+                <button title="Supprimer" onClick={() => onDelete(el)} style={{ background: t.redSoft, color: t.red, border: "none", borderRadius: t.radius, padding: "5px 8px", cursor: "pointer", display: "flex" }}>
+                  <i className="ti ti-trash" style={{ fontSize: 14 }} />
+                </button>
+              </div>
             </div>
-            <div>
-              <InfoItem icon="ti-calendar" label="Date" value={p.date} />
-              <InfoItem icon="ti-credit-card" label="Méthode" value={p.mode} />
-              <InfoItem icon="ti-tag" label="Type" value={p.typePaiement || "Par tranche"} />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -261,6 +606,7 @@ export default function Paiements() {
   const [showExport, setShowExport] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [detailItem, setDetailItem] = useState(null);
+  const [receiptItem, setReceiptItem] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const exportRef = useRef();
   useOutsideClick(exportRef, () => setShowExport(false));
@@ -309,13 +655,26 @@ export default function Paiements() {
 
   const printReceipt = (p) => {
     const w = window.open("","_blank");
-    w.document.write(`<html><head><title>Reçu - ${p.eleve}</title><style>body{font-family:${t.font};padding:40px;color:${t.text}}.h{text-align:center;border-bottom:2px solid ${t.border};pb:20px;mb:30px}.t{font-size:24px;font-weight:bold;color:${t.blue}}table{width:100%;mt:30px;border-collapse:collapse}th,td{padding:12px;text-align:left;border-bottom:1px solid ${t.border}}.total{font-size:20px;font-weight:bold;color:${t.blue};mt:20px;text-align:right}</style></head><body>`);
-    w.document.write(`<div class="h"><div class="t">REÇU DE PAIEMENT</div><div>Lycée Donka - Conakry</div></div>`);
-    w.document.write(`<p><b>Élève:</b> ${p.eleve} | <b>Classe:</b> ${p.classe} | <b>Date:</b> ${p.date} | <b>N°:</b> ${p.id}</p>`);
-    w.document.write(`<table><tr><th>Description</th><th style="text-align:right">Montant</th></tr><tr><td>${p.tranche}</td><td style="text-align:right">${p.montant.toLocaleString()} GNF</td></tr></table>`);
-    w.document.write(`<div class="total">Total: ${p.montant.toLocaleString()} GNF</div><p style="mt:40px;text-align:center;color:${t.muted};font-size:12px">Mode: ${p.mode}</p></body></html>`);
+    const recu = numeroRecu(p);
+    w.document.write(`<html><head><title>Reçu - ${p.eleve}</title><style>body{font-family:${t.font};padding:40px;color:${t.text};max-width:520px;margin:0 auto}.h{text-align:center;border-bottom:2px solid ${t.blue};padding-bottom:16px;margin-bottom:24px}.t{font-size:22px;font-weight:bold;color:${t.blue}}table{width:100%;margin-top:16px;border-collapse:collapse}th,td{padding:10px 0;text-align:left;border-bottom:1px solid ${t.border};font-size:14px}th{color:${t.sub};font-weight:600;width:46%}.total{font-size:20px;font-weight:bold;color:${t.blue};margin-top:20px;text-align:right}</style></head><body>`);
+    w.document.write(`<div class="h"><div class="t">REÇU DE PAIEMENT</div><div>SchoolX — Lycée Donka, Conakry</div><div style="margin-top:8px;font-weight:600;color:${t.blue}">N° ${recu}</div></div>`);
+    w.document.write(`<table>`);
+    w.document.write(`<tr><th>Élève</th><td>${p.eleve}</td></tr>`);
+    w.document.write(`<tr><th>Classe</th><td>${p.classe}</td></tr>`);
+    w.document.write(`<tr><th>Tranche</th><td>${p.tranche}</td></tr>`);
+    w.document.write(`<tr><th>Mode de paiement</th><td>${p.mode}</td></tr>`);
+    w.document.write(`<tr><th>Date</th><td>${p.date}</td></tr>`);
+    w.document.write(`<tr><th>N° de reçu</th><td>${recu}</td></tr>`);
+    w.document.write(`</table>`);
+    w.document.write(`<div class="total">Montant payé : ${(p.montant || 0).toLocaleString("fr-FR")} GNF</div>`);
+    w.document.write(`<p style="margin-top:40px;text-align:center;color:${t.muted};font-size:12px">Document remis au parent</p></body></html>`);
     w.document.close(); w.print();
     showToast("Reçu généré", "info", `Impression du reçu pour ${p.eleve}.`);
+  };
+
+  const handlePdfRecu = (p) => {
+    downloadRecuPdf(p);
+    showToast("Reçu téléchargé", "success", `PDF généré pour ${p.eleve}.`);
   };
 
   const handleSave = (s) => {
@@ -327,11 +686,18 @@ export default function Paiements() {
       setData([s, ...data]);
       showToast("Paiement ajouté", "success", `Nouveau paiement enregistré pour ${s.eleve}.`);
     }
+    if (detailItem && (detailItem.id === s.id || detailItem.eleve === s.eleve)) setDetailItem(s);
+    setReceiptItem(s);
   };
 
   const handleDelete = (p) => {
-    setData(data.filter(d => d.id !== p.id));
+    const next = data.filter(d => d.id !== p.id);
+    setData(next);
     showToast("Paiement supprimé", "warning", `Le paiement de ${p.eleve} a été retiré.`);
+    if (detailItem && detailItem.id === p.id) {
+      const rest = next.filter(d => d.eleve === p.eleve);
+      setDetailItem(rest[0] || null);
+    }
   };
 
   const statCards = [
@@ -344,13 +710,27 @@ export default function Paiements() {
   const statusClass = s => s === "Payé" ? "paye" : s === "Partiellement payé" ? "partiel" : "impaye";
 
   if (detailItem) return (
-    <FichePaiement
-      paiement={detailItem}
-      onRetour={() => setDetailItem(null)}
-      onEdit={p => { setDetailItem(null); setEditItem(p); }}
-      onDelete={p => { setDetailItem(null); setConfirmDel(p); }}
-      onPrint={printReceipt}
-    />
+    <>
+      <FichePaiement
+        paiement={detailItem}
+        historique={data.filter(d => d.eleve === detailItem.eleve)}
+        onRetour={() => setDetailItem(null)}
+        onEdit={p => setEditItem(p)}
+        onDelete={p => setConfirmDel(p)}
+        onPrint={p => setReceiptItem(p)}
+      />
+      <AnimatePresence>
+        {editItem && <PayModal key="edit" paiement={editItem} onClose={()=>setEditItem(null)} onSave={handleSave}/>}
+        {receiptItem && <RecuModal key="recu" paiement={receiptItem} onClose={()=>setReceiptItem(null)} onPrint={printReceipt} onPdf={handlePdfRecu}/>}
+      </AnimatePresence>
+      <ConfirmModal
+        isOpen={!!confirmDel}
+        title="Supprimer le paiement"
+        message={confirmDel ? `Voulez-vous vraiment supprimer le paiement de ${confirmDel.eleve} ? Cette action est irréversible.` : ""}
+        onConfirm={() => { handleDelete(confirmDel); setConfirmDel(null); }}
+        onCancel={() => setConfirmDel(null)}
+      />
+    </>
   );
 
   return (
@@ -378,14 +758,24 @@ export default function Paiements() {
       {/* Period pills + actions */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
         <div className="pay-period-row" style={{marginBottom:0}}>
-          {["Toutes","Tranche 1","Tranche 2","Tranche 3"].map(tr=>(
-            <button key={tr} className={`pay-period-pill${trancheFilter===tr?" active":""}`} onClick={()=>{setTrancheFilter(tr);setPage(1);}}>{tr}</button>
-          ))}
+          {["Toutes","Tranche 1","Tranche 2","Tranche 3"].map(tr=>{
+            const actif = trancheFilter===tr;
+            return (
+              <button key={tr} className={`pay-period-pill${actif?" active":""}`} onClick={()=>{setTrancheFilter(tr);setPage(1);}}
+                style={{
+                  padding:"8px 13px", border:`1px solid ${actif?t.blue:t.border}`, borderRadius:t.radius,
+                  background:actif?t.blueSoft:t.surface, color:actif?t.blue:t.sub,
+                  fontSize:12, fontWeight:actif?600:500, cursor:"pointer", fontFamily:t.font,
+                  boxShadow:t.shadow, transition:"all .15s",
+                }}
+              >{tr}</button>
+            );
+          })}
         </div>
         <div style={{display:"flex",gap:8,position:"relative"}}>
-          <button className="pay-btn outline" onClick={()=>setEditItem({})}><i className="ti ti-plus"/> Nouveau paiement</button>
+          <button className="pay-btn primary" onClick={()=>setEditItem({})}><i className="ti ti-plus"/> Nouveau paiement</button>
           <div ref={exportRef} style={{position:"relative"}}>
-            <button className="pay-btn primary" onClick={()=>setShowExport(v=>!v)}><i className="ti ti-download"/> Exporter <i className="ti ti-chevron-down" style={{fontSize:13}}/></button>
+            <button className="pay-btn outline" onClick={()=>setShowExport(v=>!v)}><i className="ti ti-download"/> Exporter <i className="ti ti-chevron-down" style={{fontSize:13}}/></button>
             <AnimatePresence>
               {showExport && (
                 <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:8}} className="pay-dropdown">
@@ -408,10 +798,6 @@ export default function Paiements() {
               <div>
                 <div className="stat-label">{c.label}</div>
                 <div className="stat-value">{c.value}{c.unit && <span className="unit"> {c.unit}</span>}</div>
-                <div className="stat-sub" style={{color:c.trendType==="down"?t.red:t.green}}>
-                  <i className={`ti ${c.trendType==="down"?"ti-trending-down":"ti-trending-up"}`} style={{fontSize:12,marginRight:4}}/>
-                  {c.trend} vs mois dernier
-                </div>
               </div>
             </div>
           </motion.div>
@@ -590,6 +976,7 @@ export default function Paiements() {
 
       <AnimatePresence>
         {editItem && <PayModal key="edit" paiement={editItem} onClose={()=>setEditItem(null)} onSave={handleSave}/>}
+        {receiptItem && <RecuModal key="recu" paiement={receiptItem} onClose={()=>setReceiptItem(null)} onPrint={printReceipt} onPdf={handlePdfRecu}/>}
       </AnimatePresence>
 
       <ConfirmModal

@@ -78,19 +78,15 @@ const Chip = ({ label, c, bg, small }) => (
   </span>
 );
 
-const StatBox = ({ icon, label, value, sub, c=t.blue, bg=t.blueSoft }) => (
-  <div style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radiusLg, padding:"18px 20px", boxShadow:t.shadow, transition:"all .2s", cursor:"default" }}
-    onMouseEnter={e=>{e.currentTarget.style.boxShadow=t.shadowMd;e.currentTarget.style.transform="translateY(-2px)"}}
-    onMouseLeave={e=>{e.currentTarget.style.boxShadow=t.shadow;e.currentTarget.style.transform="translateY(0)"}}
-  >
-    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:12 }}>
-      <div style={{ width:40, height:40, borderRadius:11, background:bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-        <i className={`ti ${icon}`} style={{ fontSize:19, color:c }} />
-      </div>
+const StatBox = ({ icon, label, value, c=t.blue, bg=t.blueSoft }) => (
+  <div style={{ background:t.surface, border:`1px solid ${t.border}`, borderRadius:t.radius, padding:"16px 18px", display:"flex", alignItems:"center", gap:14, boxShadow:t.shadow }}>
+    <div style={{ width:40, height:40, borderRadius:9, background:bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      <i className={`ti ${icon}`} style={{ fontSize:19, color:c }} />
     </div>
-    <div style={{ fontSize:26, fontWeight:800, color:t.text, lineHeight:1 }}>{value}</div>
-    <div style={{ fontSize:12, color:t.sub, marginTop:5, fontWeight:500 }}>{label}</div>
-    {sub && <div style={{ fontSize:11, color:t.muted, marginTop:3 }}>{sub}</div>}
+    <div>
+      <div style={{ fontSize:11, color:t.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{label}</div>
+      <div style={{ fontSize:21, fontWeight:700, color:t.text, marginTop:3, lineHeight:1 }}>{value}</div>
+    </div>
   </div>
 );
 
@@ -421,9 +417,9 @@ export default function Documents() {
       </div>
 
       {/* ── KPI ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:14, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:20 }}>
         <StatBox icon="ti-files"      label="Total documents"       value={totalDocs}       c={t.blue}   bg={t.blueSoft}   />
-        <StatBox icon="ti-file-plus"  label="Générés ce mois"       value={docsMois}        c={t.green}  bg={t.greenSoft}  sub="Janvier 2025" />
+        <StatBox icon="ti-file-plus"  label="Générés ce mois"       value={docsMois}        c={t.green}  bg={t.greenSoft}  />
         <StatBox icon="ti-database"   label="Stockage utilisé"      value={`${stockage} MB`} c={t.purple} bg={t.purpleSoft} />
         <StatBox icon="ti-archive"    label="Archivés"              value={archives}        c={t.sub}    bg="#f3f4f6"      />
       </div>
